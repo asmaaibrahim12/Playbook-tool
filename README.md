@@ -16,8 +16,13 @@ capabilities/*.yaml          the single source
       │
       ├── tools/render.py    → docs/*.md      a person browses these
       ├── tools/catalogue.py → search, can-i  an agent queries these
-      └── tools/validate.py  → CI gate        keeps it honest
+      ├── tools/validate.py  → CI gate        keeps it honest
+      └── server.py          → HTTP           both surfaces, one deployment
 ```
+
+`server.py` imports the query logic from `tools/catalogue.py` rather than
+reimplementing it. A second implementation of "what does this capability do" is
+exactly the problem this project exists to solve.
 
 ## Run it
 
@@ -64,6 +69,44 @@ python3 tools/catalogue.py can-i "file an income tax return" \
 That last one is the question a builder actually asks. Try it with
 `"file a VAT advance return"` too — nothing in the catalogue does that, and the
 output says so instead of guessing.
+
+**5. Both surfaces in a browser**
+
+```bash
+python3 server.py        # → http://localhost:8000
+```
+
+| Route | What it is |
+|---|---|
+| `/` | the catalogue a person browses |
+| `/c/{name}` | one capability page |
+| `/api` | the endpoint index, so an agent can discover the rest |
+| `/api/capabilities` · `/api/capabilities/{name}` | list and full manifest |
+| `/api/search?q=` | rank capabilities against a need |
+| `/api/can-i?need=&orchard=&market=` | the builder's question |
+| `/healthz` | returns the manifest count, or 503 if one is broken |
+
+## Deploy it
+
+Railway picks this up from `requirements.txt` and `railway.json` with no extra
+configuration. From the repo root:
+
+```bash
+npm i -g @railway/cli     # once
+railway login
+railway init              # or: railway link   to attach an existing project
+railway up
+railway domain            # generates the public URL
+```
+
+Or from the Railway dashboard: **New Project → Deploy from GitHub repo**, pick
+this repository, and deploy. Nothing to set — no environment variables, no
+database, no build step. `$PORT` is read from the environment and the health
+check points at `/healthz`.
+
+The same files work on anything that reads a `Procfile` (Render, Fly, Heroku).
+Check Railway's current pricing before you leave it running; a small always-on
+service is usually a few dollars a month.
 
 ## What's in a manifest
 

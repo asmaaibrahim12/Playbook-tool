@@ -1,0 +1,5 @@
+pyyaml>=6.0
+jsonschema>=4.0
+starlette>=0.37
+uvicorn>=0.30
+markdown>=3.5
