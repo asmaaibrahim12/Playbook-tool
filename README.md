@@ -8,8 +8,7 @@ Wiki pages go stale because the documentation is a separate thing from what it
 describes. When the two drift apart, nothing breaks — so they drift apart.
 
 Here each capability is **one manifest**, living next to the code. Both the page
-a person reads and the index an agent queries are generated from it, so they
-can't disagree.
+a person reads and the index an agent queries are generated from it.
 
 ```
 capabilities/*.yaml          the single source
@@ -21,8 +20,7 @@ capabilities/*.yaml          the single source
 ```
 
 `server.py` imports the query logic from `tools/catalogue.py` rather than
-reimplementing it. A second implementation of "what does this capability do" is
-exactly the problem this project exists to solve.
+reimplementing it, so there is only one answer to "what does this capability do".
 
 ## Run it
 
@@ -116,7 +114,7 @@ copied. Three additions are specific to this problem:
 
 | Field | Why |
 |---|---|
-| `does_not` + `build_your_own_if` | Both required. A catalogue that only says yes doesn't get believed. Being willing to send a team away is what makes the yes worth anything. |
+| `does_not` + `build_your_own_if` | Both required. A catalogue that only says yes doesn't get believed. |
 | `evaluation.self_service` | The platform owns *how* you prove a capability is safe to ship; each consuming team sets its own threshold. If they can't run the eval on their own data, the platform team is the only one who can say it works — a bottleneck on trust that no uptime dashboard shows. |
 | `scope.jurisdictions` + `advice_boundary` | Market differences as data, not forked code. Some markets allow software to act alone; others require a licensed human in the loop. |
 

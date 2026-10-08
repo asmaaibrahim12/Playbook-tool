@@ -2,12 +2,11 @@
 """The agent surface over the same manifests humans read.
 
 Exposes four tools, shaped as an MCP server would expose them. The MCP spec of
-28 July 2026 is stateless request/response, so this is an ordinary HTTP service
-behind a load balancer — no special infrastructure needed.
+28 July 2026 is stateless request/response, so this runs as an ordinary HTTP
+service.
 
-The point: ONE source (capabilities/*.yaml), TWO surfaces. The docs a human
-reads and the index an agent queries cannot drift, because they are the same
-bytes.
+ONE source (capabilities/*.yaml), TWO surfaces: the docs a human reads and the
+index an agent queries are the same bytes.
 
 Usage:
   python3 tools/catalogue.py search "extract data from an invoice"
@@ -83,8 +82,7 @@ def tool_can_i(need, orchard, market, docs):
     The matcher is lexical overlap, not semantics. It cannot tell the
     difference between a capability that does the thing and one that merely
     uses the same words, so this tool reports its own confidence rather than
-    asserting. A catalogue that answers confidently when it does not know is
-    worse than one that says it does not know.
+    asserting.
     """
     ranked = tool_search(need, docs)
     if not ranked:
@@ -148,7 +146,6 @@ def tool_can_i(need, orchard, market, docs):
     # Two different kinds of claim, kept apart on purpose. Which capability you
     # meant is a GUESS the matcher made from word overlap. Whether that
     # capability is available in your market is a FACT the manifest declares.
-    # Collapsing them into one "yes" is how a catalogue lies to you.
     return {
         "match": {
             "capability": top["name"],
@@ -173,7 +170,7 @@ def tool_can_i(need, orchard, market, docs):
 
 
 def tool_consumers_of(name, docs):
-    """Reach, measured rather than asserted — the input to prioritisation."""
+    """Which teams depend on this, read off the manifests."""
     d = tool_describe(name, docs)
     if "error" in d:
         return d

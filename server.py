@@ -3,8 +3,8 @@
 
 Both surfaces, one source. The browsable pages and the JSON API read the same
 files in capabilities/, and the query logic is imported from tools/catalogue.py
-rather than reimplemented here — a second implementation of "what does this
-capability do" would be the exact problem this project exists to solve.
+rather than reimplemented here, so there is only one answer to "what does this
+capability do".
 
 Local:   python3 server.py          → http://localhost:8000
 Railway: Procfile runs the same command; PORT comes from the environment.
