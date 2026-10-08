@@ -43,7 +43,7 @@ def tool_search(query, docs):
     q = _tokens(query) - STOP
     results = []
     for d in docs:
-        m, s = d["metadata"], d["spec"]
+        m, s = d["metadata"], d
         haystack = " ".join([
             m["name"], m.get("title", ""), m["summary"],
             " ".join(m.get("tags", [])),
@@ -107,10 +107,10 @@ def tool_can_i(need, orchard, market, docs):
                         "raise it in the Trunk channel.",
         }
     full = tool_describe(top["name"], docs)
-    juris = {j["market"]: j for j in full["spec"]["scope"].get("jurisdictions", [])}
+    juris = {j["market"]: j for j in full["availability"]["markets"]}
     j = juris.get(market)
 
-    uses_it_now = [c for c in full["spec"]["consumers"]
+    uses_it_now = [c for c in full["consumers"]
                    if c["orchard"] == orchard and c.get("market") == market]
 
     if j is None:
@@ -155,15 +155,15 @@ def tool_can_i(need, orchard, market, docs):
                       "does / does_not below. If none of the candidates does "
                       "what you asked, the catalogue has no answer for you.",
         },
-        "does": full["spec"]["scope"]["does"],
-        "does_not": full["spec"]["scope"]["does_not"],
+        "does": full["scope"]["does"],
+        "does_not": full["scope"]["does_not"],
         "if_that_is_the_right_capability": {
             "market_status": verdict,
             "guidance": guidance,
             "market_note": (j or {}).get("notes"),
             "your_orchard_already_uses_it": bool(uses_it_now),
-            "build_your_own_if": full["spec"]["scope"]["build_your_own_if"],
-            "evaluation_self_service": full["spec"]["evaluation"]["self_service"],
+            "build_your_own_if": full["build_your_own_if"],
+            "evaluation_self_service": full["evaluation"]["self_service"],
             "owner": full["metadata"]["owner"],
         },
     }
@@ -174,7 +174,7 @@ def tool_consumers_of(name, docs):
     d = tool_describe(name, docs)
     if "error" in d:
         return d
-    consumers = d["spec"]["consumers"]
+    consumers = d["consumers"]
     return {
         "capability": name,
         "orchard_count": len({c["orchard"] for c in consumers}),

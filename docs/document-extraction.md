@@ -59,11 +59,11 @@ Requires a licensed human:
 
 Held-out labelled document set per type and market. Field-level exact match for structured fields, normalised match for free text. Run it yourself: `npx @taxfix/data-docs eval --set <your-set> --market DE`
 
-| Metric | Value | Measured on | As of |
-|---|---|---|---|
-| field_accuracy_lohnsteuerbescheinigung | 0.97 | DE held-out set, n=4,200 | 2026-09-30 |
-| field_accuracy_invoice | 0.89 | DE self-employed set, n=1,850 | 2026-09-30 |
-| straight_through_rate | 0.71 fraction of documents needing no human touch | DE combined set | 2026-09-30 |
+| Metric | Value | Source | Measured on | As of |
+|---|---|---|---|---|
+| field_accuracy_lohnsteuerbescheinigung | 0.97 | **assumed** | DE held-out set, n=4,200 | 2026-09-30 |
+| field_accuracy_invoice | 0.89 | **assumed** | DE self-employed set, n=1,850 | 2026-09-30 |
+| straight_through_rate | 0.71 fraction of documents needing no human touch | **assumed** | DE combined set | 2026-09-30 |
 
 **Known failure modes**
 

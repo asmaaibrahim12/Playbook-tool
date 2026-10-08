@@ -55,10 +55,10 @@ Requires a licensed human:
 
 Labelled transaction set per market, stratified by category frequency. Top-1 accuracy plus a separate figure for the long tail, because headline accuracy is dominated by a handful of common categories.
 
-| Metric | Value | Measured on | As of |
-|---|---|---|---|
-| top1_accuracy_overall | 0.92 | DE SKR03 set, n=12,000 | 2026-09-30 |
-| top1_accuracy_long_tail | 0.64 | categories outside the top 20 by frequency | 2026-09-30 |
+| Metric | Value | Source | Measured on | As of |
+|---|---|---|---|---|
+| top1_accuracy_overall | 0.92 | **assumed** | DE SKR03 set, n=12,000 | 2026-09-30 |
+| top1_accuracy_long_tail | 0.64 | **assumed** | categories outside the top 20 by frequency | 2026-09-30 |
 
 **Known failure modes**
 

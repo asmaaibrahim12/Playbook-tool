@@ -94,7 +94,7 @@ async def index(request):
     docs = load()
     rows = []
     for d in docs:
-        m, s = d["metadata"], d["spec"]
+        m, s = d["metadata"], d
         cls = {"stable": "ok", "beta": "warn", "experimental": ""}[m["lifecycle"]]
         n = len({c["orchard"] for c in s["consumers"]})
         rows.append(
@@ -178,7 +178,7 @@ async def api_list(request):
             "trunk": d["metadata"]["trunk"],
             "lifecycle": d["metadata"]["lifecycle"],
             "summary": d["metadata"]["summary"].strip(),
-            "orchards": sorted({c["orchard"] for c in d["spec"]["consumers"]}),
+            "orchards": sorted({c["orchard"] for c in d["consumers"]}),
             "href": f"/api/capabilities/{d['metadata']['name']}",
         }
         for d in load()

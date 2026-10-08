@@ -52,15 +52,21 @@ Requires a licensed human:
 
 Statutory schema conformance plus regression against prior-year returns.
 
-| Metric | Value | Measured on | As of |
-|---|---|---|---|
-| submission_acceptance_rate | 0.994 | DE ELSTER submissions | 2026-09-30 |
+| Metric | Value | Source | Measured on | As of |
+|---|---|---|---|---|
+| submission_acceptance_rate | 0.994 | **assumed** | DE ELSTER submissions | 2026-09-30 |
 
 **Known failure modes**
 
 - ELSTER pre-fill is unavailable to users who already hold an ELSTER account and requires a postal activation code — which structurally excludes most self-employed users from automated retrieval
 
 **Fallback:** Rejected submissions route to the Assisted Orchard's advisor queue.
+
+## Cost
+
+≈ €0.11 per return submitted (as of 2026-09-30)
+
+> Cost per ACCEPTED submission. A rejected return costs this again plus the advisor minutes spent diagnosing it, so acceptance rate is the number that moves the cost, not the per-call price.
 
 ## Who depends on this
 

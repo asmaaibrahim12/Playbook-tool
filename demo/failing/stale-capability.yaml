@@ -1,35 +1,63 @@
+# Deliberately broken. Four separate problems, only one of which is about
+# documentation. Run: python3 tools/validate.py demo/failing
 apiVersion: capability.taxfix.internal/v1
 kind: Capability
+
 metadata:
   name: receipt-matching
   title: Receipt Matching
   trunk: data-and-docs
   owner: "#trunk-data-and-docs"
   summary: Matches receipts to bank transactions.
-  lifecycle: stable
-spec:
-  interface:
-    protocol: http
-    entrypoint: https://api.internal.taxfix/data-docs/v1/match
-  scope:
-    does: ["Match a receipt to a transaction"]
-    does_not: ["Handle foreign currency"]
-    build_your_own_if: ["You need real-time matching"]
-  evaluation:
-    method: Labelled match set.
-    metrics:
-      - name: match_accuracy
-        value: 0.88
-        measured_on: DE set
-        as_of: "2025-01-10"
-    self_service: false
-  consumers:
-    - orchard: business
-      since: "2026-03-18"
-      criticality: blocking
-    - orchard: self-serve
-      since: "2025-06-01"
-      criticality: important
-  support:
-    channel: "#trunk-data-and-docs"
-    contribution: closed
+  lifecycle: stable          # PROBLEM 2: stable, but self_service is false below
+
+scope:
+  does:
+    - Match a receipt to a bank transaction
+  does_not:
+    - Handle foreign currency
+
+build_your_own_if:
+  - You need real-time matching inside a live user flow
+
+availability:
+  markets:
+    - market: DE
+      status: live
+      obligation: EÜR
+      channel: ELSTER
+
+evaluation:
+  self_service: false        # PROBLEM 2: consumers cannot verify this themselves
+  method: Labelled match set, scored on exact transaction match.
+  metrics:
+    - name: match_accuracy
+      value: 0.88
+      measured_on: DE set
+      as_of: "2025-01-10"    # PROBLEM 1: well past the 180-day freshness limit
+      source: assumed
+  # PROBLEM 4: blocking consumer below, but no human_fallback declared
+
+cost:
+  unit: per receipt
+  measure: Cost per matched receipt.
+  source: assumed
+  as_of: "2026-09-30"
+
+interface:
+  protocol: http
+  entrypoint: https://api.internal.taxfix/data-docs/v1/match
+
+consumers:
+  - orchard: business
+    market: DE
+    since: "2026-03-18"
+    criticality: blocking
+  - orchard: self-serve
+    market: DE
+    since: "2025-06-01"
+    criticality: important
+
+support:
+  channel: "#trunk-data-and-docs"
+  contribution: closed       # PROBLEM 3: two Orchards depend on it, PRs refused

@@ -20,7 +20,7 @@ STATUS = {"live": "✅ live", "in-progress": "🚧 in progress", "not-supported"
 
 
 def render_one(d):
-    m, s = d["metadata"], d["spec"]
+    m, s = d["metadata"], d
     L = [f"# {m.get('title', m['name'])}", ""]
     L.append(f"**{BADGE[m['lifecycle']]}** · Trunk: `{m['trunk']}` · Owner: {m['owner']}")
     if m.get("graduated_from"):
@@ -30,20 +30,20 @@ def render_one(d):
     L += ["## Should you use this?", ""]
     L += ["**It does**", ""] + [f"- {x}" for x in s["scope"]["does"]] + [""]
     L += ["**It does not**", ""] + [f"- {x}" for x in s["scope"]["does_not"]] + [""]
-    L += ["**Build your own if**", ""] + [f"- {x}" for x in s["scope"]["build_your_own_if"]] + [""]
+    L += ["**Build your own if**", ""] + [f"- {x}" for x in s["build_your_own_if"]] + [""]
 
-    if s["scope"].get("jurisdictions"):
+    if s["availability"]["markets"]:
         L += ["## By market", "", "| Market | Status | Obligation | Channel |", "|---|---|---|---|"]
-        for j in s["scope"]["jurisdictions"]:
+        for j in s["availability"]["markets"]:
             L.append(f"| {j['market']} | {STATUS[j['status']]} | "
                      f"{j.get('obligation','—')} | {j.get('channel','—')} |")
         L.append("")
-        for j in s["scope"]["jurisdictions"]:
+        for j in s["availability"]["markets"]:
             if j.get("notes"):
                 L += [f"> **{j['market']}** — {j['notes'].strip()}", ""]
 
-    if s["scope"].get("advice_boundary"):
-        ab = s["scope"]["advice_boundary"]
+    if s["availability"].get("advice_boundary"):
+        ab = s["availability"]["advice_boundary"]
         L += ["## Regulatory boundary", "",
               "Automated (software may do this):", ""]
         L += [f"- {x}" for x in ab["automated"]]
@@ -57,10 +57,11 @@ def render_one(d):
     L += ["## Does it actually work?", "",
           f"{'**You can verify this yourself.**' if ev['self_service'] else '⚠️ **Not self-service** — you must ask the Trunk to verify. Treat that as a bottleneck.'}",
           "", ev["method"].strip(), "",
-          "| Metric | Value | Measured on | As of |", "|---|---|---|---|"]
+          "| Metric | Value | Source | Measured on | As of |", "|---|---|---|---|---|"]
     for mt in ev["metrics"]:
+        src = "measured" if mt.get("source") == "measured" else "**assumed**"
         L.append(f"| {mt['name']} | {mt['value']}{(' ' + mt['unit']) if mt.get('unit') else ''} "
-                 f"| {mt['measured_on']} | {mt['as_of']} |")
+                 f"| {src} | {mt['measured_on']} | {mt['as_of']} |")
     L.append("")
     if ev.get("known_failure_modes"):
         L += ["**Known failure modes**", ""] + [f"- {x}" for x in ev["known_failure_modes"]] + [""]
@@ -107,7 +108,7 @@ def main():
              "the manifest is wrong — and CI will tell you.", "",
              "| Capability | Trunk | Status | Orchards | Summary |", "|---|---|---|---|---|"]
     for d in docs:
-        m, s = d["metadata"], d["spec"]
+        m, s = d["metadata"], d
         n_orch = len({c["orchard"] for c in s["consumers"]})
         index.append(f"| [{m.get('title', m['name'])}](./{m['name']}.md) | `{m['trunk']}` "
                      f"| {BADGE[m['lifecycle']]} | {n_orch} | {m['summary'].strip()[:80]}… |")

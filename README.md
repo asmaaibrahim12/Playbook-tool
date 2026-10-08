@@ -108,15 +108,36 @@ service is usually a few dollars a month.
 
 ## What's in a manifest
 
-The envelope is [Backstage](https://backstage.io)'s — `apiVersion`, `kind`,
-`metadata`, `spec`, a small closed set of kinds, specs referenced rather than
-copied. Three additions are specific to this problem:
+Fields are ordered by the questions a builder actually asks, in the order they
+ask them. A manifest reads top to bottom as a decision.
+
+| | Question | Field |
+|---|---|---|
+| 1 | Does it do what I need? | `scope.does` / `scope.does_not` |
+| 2 | Should I not use it at all? | `build_your_own_if` |
+| 3 | Does it work where I am? | `availability.markets`, `availability.advice_boundary` |
+| 4 | Is it good enough for my risk? | `evaluation` |
+| 5 | What does it cost me? | `cost` |
+| 6 | How do I call it? | `interface` |
+| 7 | Who else relies on it? | `consumers` |
+| 8 | Who do I ask? | `support` |
+
+`interface` sits sixth on purpose. Nobody needs an entrypoint for a capability
+they've already decided against, and putting it first — as most service
+catalogues do — makes the file read backwards for its main reader.
+
+Three fields carry most of the weight:
 
 | Field | Why |
 |---|---|
-| `does_not` + `build_your_own_if` | Both required. A catalogue that only says yes doesn't get believed. |
-| `evaluation.self_service` | The platform owns *how* you prove a capability is safe to ship; each consuming team sets its own threshold. If they can't run the eval on their own data, only the platform team can say whether it works. That's a bottleneck on trust, and no uptime dashboard shows it. |
-| `scope.jurisdictions` + `advice_boundary` | Market differences as data, not forked code. Some markets allow software to act alone; others require a licensed human in the loop. |
+| `scope.does_not` + `build_your_own_if` | Both required. A catalogue that only says yes doesn't get believed. The first is what it can't do; the second is when you shouldn't ask it to. |
+| `evaluation.self_service` | First field in its section. The platform owns *how* you prove a capability is safe to ship; each consuming team sets its own threshold. If they can't run the eval on their own data, only the platform team can say whether it works. That's a bottleneck on trust, and no uptime dashboard shows it. |
+| `availability` | Market differences as data, not forked code. Some markets let software act alone; others need a licensed human in the loop, so the legal boundary is configured per capability rather than assumed globally. |
+
+The envelope borrows [Backstage](https://backstage.io)'s `apiVersion` / `kind` /
+`metadata`, a small closed set of kinds, and specs referenced rather than copied.
+It drops Backstage's `spec` wrapper, which is a Kubernetes convention that buys
+nothing here beyond an extra level on every path.
 
 ## The rules CI enforces
 
@@ -149,6 +170,10 @@ was to stop merging two different claims into one answer:
 you verify before you trust. In production the matcher would be embeddings over
 the same manifests; separating the guess from the fact would stay the same shape.
 
-Every accuracy, cost and throughput number in the manifests is invented and
-marked `ASSUMPTION`. The eval sets aren't included — real tax documents are
-customer data and don't belong in a repo.
+Every accuracy, cost and throughput number in the manifests is invented. That
+isn't left to a comment: each metric and the cost block carry a required
+`source` field set to `assumed`, so the generated docs print it and the API
+returns it. A consuming team can't mistake a placeholder for a measurement.
+
+The eval sets aren't included — real tax documents are customer data and don't
+belong in a repo.

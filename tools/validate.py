@@ -25,7 +25,7 @@ MAX_METRIC_AGE_DAYS = 180
 def check_freshness(doc, name, today):
     """Schema validity is not enough — a manifest can be well-formed and stale."""
     problems = []
-    for metric in doc["spec"]["evaluation"]["metrics"]:
+    for metric in doc["evaluation"]["metrics"]:
         as_of = datetime.date.fromisoformat(str(metric["as_of"]))
         age = (today - as_of).days
         if age > MAX_METRIC_AGE_DAYS:
@@ -39,7 +39,7 @@ def check_freshness(doc, name, today):
 def check_trust_rules(doc, name):
     """Rules that encode the operating model, not just the data shape."""
     problems = []
-    spec = doc["spec"]
+    spec = doc
     meta = doc["metadata"]
 
     # A stable capability whose eval cannot be run by its consumers makes the

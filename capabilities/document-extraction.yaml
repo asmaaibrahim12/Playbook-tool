@@ -1,131 +1,126 @@
 apiVersion: capability.taxfix.internal/v1
 kind: Capability
-
 metadata:
   name: document-extraction
   title: Document Extraction
   trunk: data-and-docs
-  owner: "#trunk-data-and-docs"
-  summary: >-
-    Extracts tax-relevant fields from uploaded documents (payslips, invoices,
-    receipts, statements) and returns structured values with per-field confidence.
+  owner: '#trunk-data-and-docs'
+  summary: Extracts tax-relevant fields from uploaded documents (payslips, invoices, receipts,
+    statements) and returns structured values with per-field confidence.
   lifecycle: beta
-  tags: [ocr, llm, extraction, documents]
-
-spec:
-  interface:
-    protocol: http
-    entrypoint: https://api.internal.taxfix/data-docs/v1/extract
-    spec_ref: ./openapi/document-extraction.yaml   # referenced, never copied
-    auth: service-token (mTLS)
-    sdk: ["@taxfix/data-docs-js", "taxfix-data-docs-py"]
-
-  scope:
-    does:
-      - Classify an uploaded document into a known type
-      - Extract named fields with a confidence score per field
-      - Return provenance (page, bounding box) for every extracted value
-      - Flag low-confidence fields for human review rather than guessing
-    does_not:
-      - Write values into a tax return — the caller decides what to accept
-      - Decide whether an expense is deductible (see advice_boundary)
-      - Handle handwritten documents above ~60% reliability
-      - Process documents in languages other than DE, EN, ES
-    build_your_own_if:
-      - You need a document type not in the supported list AND volume is under
-        ~500/month — the integration cost will exceed the benefit
-      - You need sub-200ms synchronous extraction inside a live user flow
-      - You are prototyping and do not yet know which fields you need
-    jurisdictions:
-      - market: DE
-        status: live
-        obligation: Einkommensteuererklärung, EÜR, UStVA
-        channel: ELSTER
-        notes: >-
-          ASSUMPTION: Lohnsteuerbescheinigung capture is live in the consumer app.
-          Taxfix support docs state the consumer Document Manager does NOT yet
-          auto-import values into the return ("planned for 2026"), so treat
-          general auto-import as in-progress rather than live.
-      - market: UK
-        status: in-progress
-        obligation: Self Assessment, MTD quarterly update
-        channel: HMRC MTD API
-      - market: ES
-        status: in-progress
-        obligation: Renta, modelo 303
-        channel: AEAT
-    advice_boundary:
-      automated:
-        - Capture a value from a document
-        - Categorise against a chart of accounts
-        - Calculate a total from captured values
-        - Transmit a completed return the taxpayer has approved
-      requires_licensed_human:
-        - Asserting a contestable tax position
-        - Recommending a treatment where the law is ambiguous
-        - Preparing a UStVA on behalf of another person
-      basis: >-
-        §3 StBerG reserves commercial tax assistance to licensed professions.
-        §6 exceptions do not extend to preparing UStVA for others
-        (BFH 7 June 2017, II R 22/15). DE is software-only; UK and ES bundle
-        human review inside the subscription, so this boundary is configured
-        per market rather than assumed globally.
-
-  evaluation:
-    method: >-
-      Held-out labelled document set per type and market. Field-level exact match
-      for structured fields, normalised match for free text. Run it yourself:
-      `npx @taxfix/data-docs eval --set <your-set> --market DE`
-    eval_set_ref: ./evals/document-extraction/
-    metrics:
-      - name: field_accuracy_lohnsteuerbescheinigung
-        value: 0.97          # ASSUMPTION — no Taxfix accuracy metric is public
-        measured_on: DE held-out set, n=4,200
-        as_of: "2026-09-30"
-      - name: field_accuracy_invoice
-        value: 0.89          # ASSUMPTION
-        measured_on: DE self-employed set, n=1,850
-        as_of: "2026-09-30"
-      - name: straight_through_rate
-        value: 0.71          # ASSUMPTION
-        unit: fraction of documents needing no human touch
-        measured_on: DE combined set
-        as_of: "2026-09-30"
-    known_failure_modes:
-      - Scanned photos at an angle degrade bounding-box provenance
-      - Multi-page invoices with line items spanning a page break
-      - Non-standard invoice layouts from small foreign suppliers
-    self_service: true
-    human_fallback: >-
-      Fields below the caller's configured threshold are returned as
-      needs_review. The Orchard decides the threshold; the Trunk does not.
-
-  cost:
-    unit: per document processed
-    amount_eur: 0.042        # ASSUMPTION
-    measure: >-
-      Track cost per SUCCESSFUL extraction, not per call. An extraction that
-      fails and escalates to a tax expert carries the advisor's minutes, which
-      on the Expert tier are charged against a 20%-of-refund fee that does not
-      scale with time spent.
-    as_of: "2026-09-30"
-
-  consumers:
-    - orchard: self-serve
-      market: DE
-      since: "2024-03-01"
-      criticality: important
-    - orchard: business
-      market: DE
-      since: "2026-03-18"
-      criticality: blocking
-    - orchard: assisted
-      market: DE
-      since: "2025-01-15"
-      criticality: important
-
-  support:
-    channel: "#trunk-data-and-docs"
-    response_target: 1 business day
-    contribution: open
-    contribution_guide: ./CONTRIBUTING.md
+  tags:
+  - ocr
+  - llm
+  - extraction
+  - documents
+scope:
+  does:
+  - Classify an uploaded document into a known type
+  - Extract named fields with a confidence score per field
+  - Return provenance (page, bounding box) for every extracted value
+  - Flag low-confidence fields for human review rather than guessing
+  does_not:
+  - Write values into a tax return — the caller decides what to accept
+  - Decide whether an expense is deductible (see advice_boundary)
+  - Handle handwritten documents above ~60% reliability
+  - Process documents in languages other than DE, EN, ES
+build_your_own_if:
+- You need a document type not in the supported list AND volume is under ~500/month — the
+  integration cost will exceed the benefit
+- You need sub-200ms synchronous extraction inside a live user flow
+- You are prototyping and do not yet know which fields you need
+availability:
+  markets:
+  - market: DE
+    status: live
+    obligation: Einkommensteuererklärung, EÜR, UStVA
+    channel: ELSTER
+    notes: 'ASSUMPTION: Lohnsteuerbescheinigung capture is live in the consumer app. Taxfix
+      support docs state the consumer Document Manager does NOT yet auto-import values into
+      the return ("planned for 2026"), so treat general auto-import as in-progress rather
+      than live.'
+  - market: UK
+    status: in-progress
+    obligation: Self Assessment, MTD quarterly update
+    channel: HMRC MTD API
+  - market: ES
+    status: in-progress
+    obligation: Renta, modelo 303
+    channel: AEAT
+  advice_boundary:
+    automated:
+    - Capture a value from a document
+    - Categorise against a chart of accounts
+    - Calculate a total from captured values
+    - Transmit a completed return the taxpayer has approved
+    requires_licensed_human:
+    - Asserting a contestable tax position
+    - Recommending a treatment where the law is ambiguous
+    - Preparing a UStVA on behalf of another person
+    basis: §3 StBerG reserves commercial tax assistance to licensed professions. §6 exceptions
+      do not extend to preparing UStVA for others (BFH 7 June 2017, II R 22/15). DE is software-only;
+      UK and ES bundle human review inside the subscription, so this boundary is configured
+      per market rather than assumed globally.
+evaluation:
+  self_service: true
+  method: 'Held-out labelled document set per type and market. Field-level exact match for
+    structured fields, normalised match for free text. Run it yourself: `npx @taxfix/data-docs
+    eval --set <your-set> --market DE`'
+  eval_set_ref: ./evals/document-extraction/
+  metrics:
+  - name: field_accuracy_lohnsteuerbescheinigung
+    value: 0.97
+    measured_on: DE held-out set, n=4,200
+    as_of: '2026-09-30'
+    source: assumed
+  - name: field_accuracy_invoice
+    value: 0.89
+    measured_on: DE self-employed set, n=1,850
+    as_of: '2026-09-30'
+    source: assumed
+  - name: straight_through_rate
+    value: 0.71
+    unit: fraction of documents needing no human touch
+    measured_on: DE combined set
+    as_of: '2026-09-30'
+    source: assumed
+  known_failure_modes:
+  - Scanned photos at an angle degrade bounding-box provenance
+  - Multi-page invoices with line items spanning a page break
+  - Non-standard invoice layouts from small foreign suppliers
+  human_fallback: Fields below the caller's configured threshold are returned as needs_review.
+    The Orchard decides the threshold; the Trunk does not.
+cost:
+  unit: per document processed
+  amount_eur: 0.042
+  measure: Track cost per SUCCESSFUL extraction, not per call. An extraction that fails
+    and escalates to a tax expert carries the advisor's minutes, which on the Expert tier
+    are charged against a 20%-of-refund fee that does not scale with time spent.
+  as_of: '2026-09-30'
+  source: assumed
+interface:
+  protocol: http
+  entrypoint: https://api.internal.taxfix/data-docs/v1/extract
+  spec_ref: ./openapi/document-extraction.yaml
+  auth: service-token (mTLS)
+  sdk:
+  - '@taxfix/data-docs-js'
+  - taxfix-data-docs-py
+consumers:
+- orchard: self-serve
+  market: DE
+  since: '2024-03-01'
+  criticality: important
+- orchard: business
+  market: DE
+  since: '2026-03-18'
+  criticality: blocking
+- orchard: assisted
+  market: DE
+  since: '2025-01-15'
+  criticality: important
+support:
+  channel: '#trunk-data-and-docs'
+  response_target: 1 business day
+  contribution: open
+  contribution_guide: ./CONTRIBUTING.md
