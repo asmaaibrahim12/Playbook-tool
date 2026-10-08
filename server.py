@@ -107,7 +107,7 @@ async def index(request):
 <p class="eyebrow">Capability playbook</p>
 <h1>What the platform already does</h1>
 <p class="lede">One manifest per capability, living beside the code. This page and
-the JSON API below are both generated from those files, so they cannot disagree.</p>
+the JSON API below are both generated from those files.</p>
 </header>
 <h2>Capabilities</h2>
 <table><tr><th>Capability</th><th>Team</th><th>Status</th><th>Teams using it</th>
