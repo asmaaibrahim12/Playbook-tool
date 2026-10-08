@@ -16,6 +16,7 @@ capabilities/*.yaml          the single source
       ├── tools/render.py    → docs/*.md      a person browses these
       ├── tools/catalogue.py → search, can-i  an agent queries these
       ├── tools/validate.py  → CI gate        keeps it honest
+      ├── tools/new.py       → scaffold       how a team adds one
       └── server.py          → HTTP           both surfaces, one deployment
 ```
 
@@ -68,7 +69,18 @@ That last one is the question a builder actually asks. Try it with
 `"file a VAT advance return"` too — nothing in the catalogue does that, and the
 output says so instead of guessing.
 
-**5. Both surfaces in a browser**
+**5. Add a capability**
+
+```bash
+python3 tools/new.py receipt-matching --trunk data-and-docs
+```
+
+Writes a manifest with every field in place, in the order a builder reads them,
+each with a line saying what it is for. Fill the TODOs and run the validator —
+it refuses a manifest that still has them, so a half-written entry can't reach
+the catalogue.
+
+**6. Both surfaces in a browser**
 
 ```bash
 python3 server.py        # → http://localhost:8000
@@ -76,7 +88,8 @@ python3 server.py        # → http://localhost:8000
 
 | Route | What it is |
 |---|---|
-| `/` | the catalogue a person browses |
+| `/` | the catalogue, plus a box to ask it a question |
+| `/ask` | the answer, with the guess and the facts rendered apart |
 | `/c/{name}` | one capability page |
 | `/api` | the endpoint index, so an agent can discover the rest |
 | `/api/capabilities` · `/api/capabilities/{name}` | list and full manifest |
@@ -143,6 +156,7 @@ nothing here beyond an extra level on every path.
 
 `tools/validate.py` checks more than schema shape:
 
+- A manifest still carrying `TODO` fails. Scaffolding is not documentation.
 - Metrics older than 180 days fail. An unproven claim can't sit there forever.
 - A capability can't be `stable` while `self_service` is false.
 - A capability serving two or more teams can't refuse pull requests — that's the

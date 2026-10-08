@@ -79,6 +79,37 @@ padding-top:14px;border-top:1px dashed var(--rule2)}}
 .try a{{font-family:var(--mono);font-size:12.5px;background:var(--card);
 border:1px solid var(--rule);border-radius:6px;padding:7px 11px;text-decoration:none}}
 .try a:hover{{border-color:var(--accent)}}
+.ask{{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);
+border:1px solid var(--rule);border-radius:10px;padding:16px;margin:14px 0}}
+.ask input{{flex:1 1 280px;min-width:0;font:inherit;padding:9px 12px;border-radius:7px;
+border:1px solid var(--rule2);background:var(--bg);color:var(--fg)}}
+.ask select{{font:inherit;padding:8px 9px;border-radius:7px;border:1px solid var(--rule2);
+background:var(--bg);color:var(--fg)}}
+.ask label{{font-size:14px;color:var(--soft);display:flex;gap:7px;align-items:center}}
+.ask button{{font:inherit;font-weight:500;padding:9px 20px;border-radius:7px;border:0;
+background:var(--accent);color:#fff;cursor:pointer}}
+.ask button:hover{{opacity:.9}}
+.ask input:focus-visible,.ask select:focus-visible,.ask button:focus-visible{{
+outline:2px solid var(--accent);outline-offset:2px}}
+.hint{{font-size:14px;color:var(--faint)}}
+.tag{{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+margin:0 0 8px;font-weight:500}}
+.guess{{background:var(--warnbg);border:1px solid var(--warn);border-radius:10px;
+padding:16px 18px;margin:16px 0}}
+.guess .tag{{color:var(--warn)}}
+.guess p{{margin:0 0 7px}}
+.small{{font-size:14px;color:var(--soft)}}
+.two{{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0}}
+.two .card{{flex:1 1 300px;min-width:0;margin:0}}
+.two .card h3{{margin:0 0 8px;font-size:15px}}
+.two ul{{margin:0;padding-left:19px;font-size:14px}}
+.warnish{{border-color:var(--warn)}}
+.facts{{background:var(--accentbg);border:1px solid var(--accent);border-radius:10px;
+padding:16px 18px;margin:16px 0}}
+.facts .tag{{color:var(--accent)}}
+.facts table{{margin:12px 0 4px}}
+.facts th{{width:46%;text-transform:none;letter-spacing:0;font-family:inherit;font-size:14px}}
+.verdictline{{margin:0 0 10px}}
 </style></head><body><div class="wrap">{body}</div></body></html>"""
 
 
@@ -103,6 +134,11 @@ async def index(request):
             f'<td><span class="badge {cls}">{m["lifecycle"]}</span></td>'
             f'<td>{n}</td><td>{m["summary"].strip()}</td></tr>'
         )
+    def opts(vals, sel):
+        return "".join(f'<option value="{v}"{" selected" if v == sel else ""}>{v}</option>'
+                       for v in vals)
+    orchard_opts, market_opts = opts(ORCHARDS, "business"), opts(MARKETS, "DE")
+
     body = f"""<header>
 <p class="eyebrow">Capability playbook</p>
 <h1>What the platform already does</h1>
@@ -112,21 +148,24 @@ the JSON API below are both generated from those files.</p>
 <h2>Capabilities</h2>
 <table><tr><th>Capability</th><th>Team</th><th>Status</th><th>Teams using it</th>
 <th>Summary</th></tr>{''.join(rows)}</table>
-<h2>The same data, for agents</h2>
-<p class="lede">Every page here has a JSON equivalent. An agent asks the question a
-builder would ask, and gets back what the manifest declares plus an honest label on
-what the matcher guessed.</p>
-<div class="try">
-<a href="/api">/api</a>
-<a href="/api/capabilities">/api/capabilities</a>
-<a href="/api/search?q=extract+fields+from+an+invoice">/api/search?q=…</a>
-<a href="/api/can-i?need=file+an+income+tax+return&amp;orchard=business&amp;market=DE">/api/can-i?…</a>
-<a href="/api/can-i?need=file+a+VAT+advance+return&amp;orchard=business&amp;market=DE">/api/can-i (nothing matches)</a>
-</div>
+<h2>Ask it something</h2>
+<p class="lede">The question a builder actually has. The answer separates what the
+catalogue <em>guessed</em> from what a manifest <em>declares</em>, because a
+catalogue that sounds certain when it is not is worse than one that says so.</p>
+<form class="ask" method="get" action="/ask">
+<input name="need" value="file an income tax return" placeholder="what are you trying to do?" aria-label="What are you trying to do?">
+<label>I am on <select name="orchard">{orchard_opts}</select></label>
+<label>in <select name="market">{market_opts}</select></label>
+<button type="submit">Ask</button>
+</form>
+<p class="hint">Try <a href="/ask?need=file+a+VAT+advance+return&amp;orchard=business&amp;market=DE">something nothing here does</a>
+· <a href="/ask?need=read+values+off+an+invoice&amp;orchard=business&amp;market=DE">something it does</a>
+· or the raw <a href="/api">JSON API</a></p>
 <div class="note"><strong>Prototype.</strong> Every accuracy, cost and throughput
-figure in these manifests is invented and marked <code>ASSUMPTION</code>. The
-structure is the point, not the numbers.</div>
+figure in these manifests is invented, and each one carries
+<code>source: assumed</code> so you can see which numbers nobody measured.</div>
 <p class="gen">Generated from capabilities/*.yaml — edit the manifest, not the page.</p>"""
+
     return page("Capability playbook", body)
 
 
@@ -148,6 +187,69 @@ async def capability_page(request):
             f'<a href="/api/capabilities/{name}">/api/capabilities/{name}</a>'
             f'<a href="/api/consumers-of/{name}">/api/consumers-of/{name}</a></div>')
     return page(hit["metadata"].get("title", name), body)
+
+
+async def ask(request):
+    """The form's answer, rendered so the guess and the facts are visually
+    separate. Same call the agent makes; this one is just legible."""
+    q = request.query_params
+    need = q.get("need", "").strip()
+    orchard = q.get("orchard") if q.get("orchard") in ORCHARDS else "business"
+    market = q.get("market") if q.get("market") in MARKETS else "DE"
+    if not need:
+        return RedirectResponse("/", status_code=302)
+
+    r = catalogue.tool_can_i(need, orchard, market, load())
+    esc = lambda t: (str(t).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+    head = (f'<header><p class="eyebrow"><a href="/">&larr; Catalogue</a></p>'
+            f'<h1>&ldquo;{esc(need)}&rdquo;</h1>'
+            f'<p class="lede">Asked as the <b>{orchard}</b> team, in <b>{market}</b>.</p></header>')
+
+    if r.get("answer") in ("no-capability-found", "no-confident-match"):
+        cands = r.get("candidates") or []
+        body = head + (
+            '<div class="guess"><p class="tag">No confident match</p>'
+            f'<p>{esc(r["guidance"])}</p>'
+            + (f'<p>Closest by wording: {", ".join(f"<code>{esc(c)}</code>" for c in cands)}</p>'
+               if cands else "")
+            + '</div>')
+        return page("No match", body)
+
+    m, facts = r["match"], r["if_that_is_the_right_capability"]
+    others = m.get("other_candidates") or []
+    verdict = facts["market_status"]
+    tone = "ok" if verdict == "available" else "warn"
+
+    body = head + f"""
+<div class="guess">
+<p class="tag">The catalogue guessed</p>
+<p><a href="/c/{esc(m['capability'])}"><b>{esc(m['capability'])}</b></a> &mdash; matched on word
+overlap, not meaning. {('Other candidates: ' + ', '.join(f'<code>{esc(c)}</code>' for c in others)) if others else ''}</p>
+<p class="small">{esc(m['verify'])}</p>
+</div>
+
+<div class="two">
+<div class="card"><h3>It does</h3><ul>{''.join(f'<li>{esc(x)}</li>' for x in r['does'])}</ul></div>
+<div class="card warnish"><h3>It does not</h3><ul>{''.join(f'<li>{esc(x)}</li>' for x in r['does_not'])}</ul></div>
+</div>
+
+<div class="facts">
+<p class="tag">What the manifest declares</p>
+<p class="verdictline"><span class="badge {tone}">{esc(verdict)}</span></p>
+<p>{esc(facts['guidance'])}</p>
+{f'<div class="note">{esc(facts["market_note"])}</div>' if facts.get("market_note") else ''}
+<table>
+<tr><th>Your team already uses it</th><td>{'yes' if facts['your_orchard_already_uses_it'] else 'no'}</td></tr>
+<tr><th>You can run the eval yourself</th><td>{'yes' if facts['evaluation_self_service'] else 'no'}</td></tr>
+<tr><th>Owner</th><td>{esc(facts['owner'])}</td></tr>
+</table>
+<h3>Build your own if</h3>
+<ul>{''.join(f'<li>{esc(x)}</li>' for x in facts['build_your_own_if'])}</ul>
+</div>
+
+<p class="hint"><a href="/">Ask something else</a> &middot;
+<a href="/api/can-i?need={esc(need).replace(' ', '+')}&amp;orchard={orchard}&amp;market={market}">the same answer as JSON</a></p>"""
+    return page(f"{need}", body)
 
 
 async def api_index(request):
@@ -228,6 +330,7 @@ async def healthz(request):
 app = Starlette(routes=[
     Route("/", index),
     Route("/c/{name}", capability_page),
+    Route("/ask", ask),
     Route("/api", api_index),
     Route("/api/capabilities", api_list),
     Route("/api/capabilities/{name}", api_one),

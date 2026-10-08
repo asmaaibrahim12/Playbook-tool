@@ -120,7 +120,7 @@ def tool_can_i(need, orchard, market, docs):
     elif j["status"] == "live" and uses_it_now:
         verdict, guidance = "available", (
             f"Use {top['name']}. Entrypoint: "
-            f"{full['spec']['interface']['entrypoint']}"
+            f"{full['interface']['entrypoint']}"
         )
     elif j["status"] == "live":
         # Live in the market, but THIS Orchard is not yet a consumer. That is
@@ -136,7 +136,7 @@ def tool_can_i(need, orchard, market, docs):
         verdict, guidance = "in-progress", (
             f"{top['name']} is being built for {market}. Talk to "
             f"{full['metadata']['owner']} before starting your own — "
-            f"contribution is '{full['spec']['support']['contribution']}'."
+            f"contribution is '{full['support']['contribution']}'."
         )
     else:
         verdict, guidance = "not-supported", (

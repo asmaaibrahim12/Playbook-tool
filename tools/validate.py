@@ -36,6 +36,29 @@ def check_freshness(doc, name, today):
     return problems
 
 
+def check_placeholders(doc, name):
+    """A scaffolded manifest should not pass until it has been filled in.
+    Without this the whole loop breaks: tools/new.py writes TODOs, the
+    validator says fine, and a half-written entry reaches the catalogue."""
+    found = []
+
+    def walk(node, path):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                walk(v, f"{path}.{k}" if path else k)
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                walk(v, f"{path}[{i}]")
+        elif isinstance(node, str) and "TODO" in node:
+            found.append(path)
+
+    walk(doc, "")
+    if not found:
+        return []
+    shown = ", ".join(found[:4]) + (f" and {len(found) - 4} more" if len(found) > 4 else "")
+    return [f"{name}: still scaffolded — TODO left at {shown}"]
+
+
 def check_trust_rules(doc, name):
     """Rules that encode the operating model, not just the data shape."""
     problems = []
@@ -88,6 +111,7 @@ def main():
             loc = ".".join(str(p) for p in e.absolute_path) or "(root)"
             problems.append(f"{name}: schema violation at {loc}: {e.message}")
             continue
+        problems += check_placeholders(doc, name)
         problems += check_freshness(doc, name, today)
         problems += check_trust_rules(doc, name)
 
