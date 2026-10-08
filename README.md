@@ -1,133 +1,113 @@
-# Trunk Capability Playbook — working prototype
+# Capability Playbook
 
-Task 3 of the Director of Product, Platform case study. Built for the
-**Data & Docs** Trunk (plus one Tax Core capability, to show cross-Trunk reach).
+A working prototype for a problem shared platform teams keep hitting: the teams
+who consume a platform can't tell what already exists, how to use it, or when
+they should just build their own.
 
-## The one idea
+Wiki pages go stale because the documentation is a separate thing from what it
+describes. When the two drift apart, nothing breaks — so they drift apart.
 
-**One source, two surfaces.**
-
-Notion pages go stale because the documentation is a *separate artefact* from
-the thing it describes. Nothing breaks when they diverge, so they diverge.
-
-Here, each capability is one manifest in `capabilities/`. Humans read generated
-docs. Agents query a generated index. Neither is authored by hand, so neither
-can drift from the other — and CI fails if a capability ships without one.
-
-Staleness stops being a discipline problem and becomes a build error.
+Here each capability is **one manifest**, living next to the code. Both the page
+a person reads and the index an agent queries are generated from it, so they
+can't disagree.
 
 ```
-capabilities/*.yaml   ← the single source of truth, lives beside the code
-        │
-        ├──► tools/render.py    ──► docs/*.md        (human surface)
-        ├──► tools/catalogue.py ──► search/can-i/…   (agent surface, MCP-shaped)
-        └──► tools/validate.py  ──► CI gate          (keeps it honest)
+capabilities/*.yaml          the single source
+      │
+      ├── tools/render.py    → docs/*.md      a person browses these
+      ├── tools/catalogue.py → search, can-i  an agent queries these
+      └── tools/validate.py  → CI gate        keeps it honest
 ```
 
-## Try it
+## Run it
+
+Needs Python 3.9+ and two packages.
 
 ```bash
-pip install pyyaml jsonschema
-
-# 1. The gate
-python3 tools/validate.py                 # passes
-python3 tools/validate.py demo/failing    # fails, with 4 specific reasons
-
-# 2. The human surface
-python3 tools/render.py && open docs/index.md
-
-# 3. The agent surface
-python3 tools/catalogue.py search "extract fields from an invoice"
-python3 tools/catalogue.py can-i "file an income tax return" \
-        --orchard business --market DE
-python3 tools/catalogue.py consumers-of income-tax-return-assembly
+pip3 install pyyaml jsonschema
 ```
 
-## Three design decisions worth defending
+If that gives you `externally-managed-environment`, use
+`pip3 install --user pyyaml jsonschema`.
 
-**1. The schema has a `does_not` and a `build_your_own_if`, and both are required.**
+**1. The CI gate, passing**
 
-A catalogue that only says yes is not trusted. The fastest way to lose an
-Orchard is to oversell: they try the capability on the case it was never going
-to handle, it fails, and now they distrust the whole platform. Telling a team
-*not* to use you is what makes the yes credible.
+```bash
+python3 tools/validate.py
+```
 
-**2. Evaluation is platform-owned; thresholds are Orchard-owned.**
+**2. The gate catching a bad manifest** — the interesting one
 
-The schema requires `evaluation.self_service`, and `validate.py` refuses to let
-a capability reach `stable` while it is false. If an Orchard cannot run the eval
-against its own data unaided, the Trunk is the sole arbiter of whether the thing
-works — which is a bottleneck for *trust*, the kind that uptime dashboards never
-show. Five Orchards each inventing their own accuracy bar is how a company ships
-an agent that is quietly wrong about tax.
+```bash
+python3 tools/validate.py demo/failing
+```
 
-**3. Jurisdiction is data, not forked code.**
+Four failures, exit code 1. Only the first is about documentation; the rest are
+operating-model rules (below).
 
-`scope.jurisdictions` models `market × obligation × channel` as rows. Germany's
-UStVA, the UK's MTD quarterly update and Spain's modelo 303 are three dialects
-of one capability: recurring, machine-verifiable filing from a running ledger.
-`advice_boundary` is per-capability for the same reason — Germany is
-software-only under §3 StBerG, while the UK and Spain bundle human review inside
-the subscription. Same capability, three human-in-the-loop configurations.
+**3. Generate the human-readable docs**
 
-## Where this lives, how it stays current, who owns it
+```bash
+python3 tools/render.py        # writes docs/, then open docs/index.md
+```
 
-**Lives** in the Trunk's own repo, next to the code it describes — not in a
-docs repo and not in Notion. The manifest is reviewed in the same PR as the
-change it documents.
+**4. Query it the way an agent would**
 
-**Stays current** through `.github/workflows/capability-catalogue.yml`, which
-enforces three things: every manifest is valid and its metrics are under 180
-days old; every service directory has a manifest; and the committed docs match
-what the manifests generate. Nobody has to remember.
+```bash
+python3 tools/catalogue.py search "extract fields from an invoice"
+python3 tools/catalogue.py describe document-extraction
+python3 tools/catalogue.py consumers-of income-tax-return-assembly
+python3 tools/catalogue.py can-i "file an income tax return" \
+        --orchard business --market DE
+```
 
-**Owned** by the Trunk team, as a team (`spec.metadata.owner` rejects a person —
-individuals leave). The catalogue *index* across all Trunks is owned by platform
-product, which is the job being hired for.
+That last one is the question a builder actually asks. Try it with
+`"file a VAT advance return"` too — nothing in the catalogue does that, and the
+output says so instead of guessing.
 
-## Prior art borrowed deliberately
+## What's in a manifest
 
-- **Backstage** — the thin `apiVersion`/`kind`/`metadata`/`spec` envelope, a small
-  closed set of kinds, and specs embedded by reference so the OpenAPI document
-  stays single-source. 3,000+ adopting companies; 700 squads at Spotify.
-- **Team Topologies** — Thinnest Viable Platform, as the guard against over-build.
-- **InnerSource Commons** — the maturity model behind `CONTRIBUTING.md`, which is
-  how a consuming team graduates from raising a ticket to raising a PR.
-- **MCP (spec of 28 Jul 2026)** — now stateless request/response, so exposing
-  this catalogue to agents is an ordinary HTTP service, not new infrastructure.
-  `tools/catalogue.py` is shaped as those four tools would be.
+The envelope is [Backstage](https://backstage.io)'s — `apiVersion`, `kind`,
+`metadata`, `spec`, a small closed set of kinds, specs referenced rather than
+copied. Three additions are specific to this problem:
 
-## What the matcher cannot do, said out loud
+| Field | Why |
+|---|---|
+| `does_not` + `build_your_own_if` | Both required. A catalogue that only says yes doesn't get believed. Being willing to send a team away is what makes the yes worth anything. |
+| `evaluation.self_service` | The platform owns *how* you prove a capability is safe to ship; each consuming team sets its own threshold. If they can't run the eval on their own data, the platform team is the only one who can say it works — a bottleneck on trust that no uptime dashboard shows. |
+| `scope.jurisdictions` + `advice_boundary` | Market differences as data, not forked code. Some markets allow software to act alone; others require a licensed human in the loop. |
 
-`catalogue.py` ranks capabilities by **lexical overlap** on their summary, tags
-and `does` list. It has no semantics, so it cannot tell a capability that does
-the thing from one that merely uses the same words.
+## The rules CI enforces
 
-That surfaced a real bug while testing. Ask it `can-i "file a VAT advance
-return"` and nothing in this catalogue files VAT advance returns — but
-`expense-categorisation` mentions VAT, and its `does` list contains the word
-"return" (as in *return a reason string*), so it matched twice and the tool
-reported **available**. A confidently wrong answer, which is the exact failure
-the playbook exists to prevent.
+`tools/validate.py` checks more than schema shape:
 
-A score threshold didn't fix it, because the problem isn't the score. The fix
-was to stop collapsing two different kinds of claim into one answer:
+- Metrics older than 180 days fail. An unproven claim can't sit there forever.
+- A capability can't be `stable` while `self_service` is false.
+- A capability serving two or more teams can't refuse pull requests — that's the
+  definition of a service desk.
+- Anything another team's roadmap depends on must declare a human fallback.
 
-- **which capability you meant** is a *guess* the matcher made from word overlap
-- **whether that capability is live in your market** is a *fact* the manifest declares
+The GitHub workflow adds two more: every service directory needs a manifest, and
+the committed docs must match what the manifests generate. So shipping *is*
+documenting, and nobody hand-edits generated output.
 
-`can-i` now returns those as separate keys — `match` (labelled a guess, with the
-other candidates) and `if_that_is_the_right_capability` (the manifest's facts) —
-with `does` and `does_not` in between, so you verify before you trust. In
-production the matcher would be embeddings over the same manifests; the
-separation of guess from fact would still be the right shape.
+## What this prototype doesn't do
 
-## Honesty about the data
+`catalogue.py` ranks by **lexical overlap**, not meaning. It can't tell a
+capability that does the thing from one that merely uses the same words — which
+produced a real bug in testing: asked about VAT advance returns, it matched the
+word "return" in an unrelated capability and answered *available*.
 
-Every accuracy, cost and straight-through figure in the manifests is marked
-`# ASSUMPTION` and is invented. **Taxfix has never published an AI accuracy,
-automation-rate or straight-through-processing metric anywhere.** The structural
-facts — the €19.99/month subscription from 18 Mar 2026, the income tax return
-published as "not yet supported" for VAT-liable users, the StBerG boundary, the
-ELSTER pre-fill exclusion — are sourced and real. The performance numbers are
-placeholders showing the *shape* of what the manifest should carry.
+A score threshold didn't fix it, because the score wasn't the problem. The fix
+was to stop merging two different claims into one answer:
+
+- **which capability you meant** is a *guess* from word overlap
+- **whether it's live in your market** is a *fact* the manifest declares
+
+`can-i` now returns those separately, with `does` and `does_not` in between, so
+you verify before you trust. In production the matcher would be embeddings over
+the same manifests; separating the guess from the fact would stay the same shape.
+
+Every accuracy, cost and throughput number in the manifests is invented and
+marked `ASSUMPTION`. The eval sets aren't included — real tax documents are
+customer data and don't belong in a repo.
