@@ -115,7 +115,7 @@ copied. Three additions are specific to this problem:
 | Field | Why |
 |---|---|
 | `does_not` + `build_your_own_if` | Both required. A catalogue that only says yes doesn't get believed. |
-| `evaluation.self_service` | The platform owns *how* you prove a capability is safe to ship; each consuming team sets its own threshold. If they can't run the eval on their own data, the platform team is the only one who can say it works — a bottleneck on trust that no uptime dashboard shows. |
+| `evaluation.self_service` | The platform owns *how* you prove a capability is safe to ship; each consuming team sets its own threshold. If they can't run the eval on their own data, only the platform team can say whether it works. That's a bottleneck on trust, and no uptime dashboard shows it. |
 | `scope.jurisdictions` + `advice_boundary` | Market differences as data, not forked code. Some markets allow software to act alone; others require a licensed human in the loop. |
 
 ## The rules CI enforces
