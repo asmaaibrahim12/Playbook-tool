@@ -1,0 +1,100 @@
+apiVersion: capability.taxfix.internal/v1
+kind: Capability
+
+metadata:
+  name: income-tax-return-assembly
+  title: Income Tax Return Assembly
+  trunk: tax-core-and-submission
+  owner: "#trunk-tax-core"
+  summary: >-
+    Assembles a complete, validated income tax return from captured facts and
+    hands it to the market's submission channel.
+  lifecycle: stable
+  tags: [tax-core, elster, submission]
+
+spec:
+  interface:
+    protocol: http
+    entrypoint: https://api.internal.taxfix/tax-core/v1/returns
+    spec_ref: ./openapi/document-extraction.yaml   # PROTOTYPE: one spec written, the others would follow the same shape
+    auth: service-token (mTLS)
+    sdk: ["@taxfix/tax-core-js"]
+
+  scope:
+    does:
+      - Validate a return against the statutory schema for the market and year
+      - Assemble annexes (Anlage N, S, EÜR, …) from supplied facts
+      - Submit via the market's channel and return the receipt
+    does_not:
+      - Capture the underlying facts — see data-and-docs capabilities
+      - Support VAT-liable sole traders in DE  # the documented gap
+      - Handle corporate returns or non-residents
+    build_your_own_if:
+      - Never. Statutory schema changes land here once; a second implementation
+        is a compliance liability, not an engineering choice.
+    jurisdictions:
+      - market: DE
+        status: live
+        obligation: Einkommensteuererklärung
+        channel: ELSTER
+        notes: >-
+          PUBLISHED GAP — Kleinunternehmer have been able to file the income tax
+          return via Taxfix since tax year 2024, but taxfix.de/umsatzsteuerpflichtig
+          states it is "not yet supported" for VAT-liable self-employed users who
+          have paid €19.99/month since 18 Mar 2026. Same capability, different
+          Orchard, not reused. This is the worked example in the prioritisation
+          framework.
+      - market: UK
+        status: live
+        obligation: Self Assessment
+        channel: HMRC
+      - market: ES
+        status: live
+        obligation: Renta
+        channel: AEAT
+    advice_boundary:
+      automated:
+        - Schema validation
+        - Arithmetic
+        - Transmission of a return the taxpayer has approved
+      requires_licensed_human:
+        - Any contested position on the return
+      basis: §3 StBerG; UK and ES bundle review inside the subscription tiers.
+
+  evaluation:
+    method: Statutory schema conformance plus regression against prior-year returns.
+    metrics:
+      - name: submission_acceptance_rate
+        value: 0.994         # ASSUMPTION
+        measured_on: DE ELSTER submissions
+        as_of: "2026-09-30"
+    known_failure_modes:
+      - ELSTER pre-fill is unavailable to users who already hold an ELSTER
+        account and requires a postal activation code — which structurally
+        excludes most self-employed users from automated retrieval
+    self_service: true
+    human_fallback: Rejected submissions route to the Assisted Orchard's advisor queue.
+
+  consumers:
+    - orchard: self-serve
+      market: DE
+      since: "2019-01-01"
+      criticality: blocking
+    - orchard: assisted
+      market: DE
+      since: "2023-01-01"
+      criticality: blocking
+    - orchard: self-serve
+      market: UK
+      since: "2024-07-02"
+      criticality: blocking
+    - orchard: self-serve
+      market: ES
+      since: "2022-04-01"
+      criticality: blocking
+
+  support:
+    channel: "#trunk-tax-core"
+    response_target: 4 hours
+    contribution: review-required
+    contribution_guide: ./CONTRIBUTING.md

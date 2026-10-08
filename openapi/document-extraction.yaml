@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info:
+  title: Document Extraction
+  version: 1.4.0
+  description: >-
+    Referenced by capabilities/document-extraction.yaml, never copied into it.
+    One source for the interface contract, the same principle the playbook
+    applies to the capability description itself.
+
+paths:
+  /extract:
+    post:
+      summary: Extract tax-relevant fields from a document
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, market]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                market:
+                  type: string
+                  enum: [DE, UK, ES]
+                confidence_threshold:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                  default: 0.85
+                  description: >-
+                    The CALLER sets this. Fields below it come back as
+                    needs_review rather than as values. The platform owns the
+                    method; the Orchard owns the threshold.
+      responses:
+        "200":
+          description: Extraction result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [document_type, fields, needs_review]
+                properties:
+                  document_type:
+                    type: string
+                    example: lohnsteuerbescheinigung
+                  fields:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, value, confidence, provenance]
+                      properties:
+                        name: { type: string }
+                        value: { type: string }
+                        confidence: { type: number }
+                        provenance:
+                          type: object
+                          description: Page and bounding box, so a human can check the source.
+                          properties:
+                            page: { type: integer }
+                            bbox:
+                              type: array
+                              items: { type: number }
+                              minItems: 4
+                              maxItems: 4
+                  needs_review:
+                    type: array
+                    description: Field names below the caller's threshold.
+                    items: { type: string }
+        "422":
+          description: Unsupported document type or language. See does_not in the manifest.

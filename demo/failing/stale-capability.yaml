@@ -1,0 +1,35 @@
+apiVersion: capability.taxfix.internal/v1
+kind: Capability
+metadata:
+  name: receipt-matching
+  title: Receipt Matching
+  trunk: data-and-docs
+  owner: "#trunk-data-and-docs"
+  summary: Matches receipts to bank transactions.
+  lifecycle: stable
+spec:
+  interface:
+    protocol: http
+    entrypoint: https://api.internal.taxfix/data-docs/v1/match
+  scope:
+    does: ["Match a receipt to a transaction"]
+    does_not: ["Handle foreign currency"]
+    build_your_own_if: ["You need real-time matching"]
+  evaluation:
+    method: Labelled match set.
+    metrics:
+      - name: match_accuracy
+        value: 0.88
+        measured_on: DE set
+        as_of: "2025-01-10"
+    self_service: false
+  consumers:
+    - orchard: business
+      since: "2026-03-18"
+      criticality: blocking
+    - orchard: self-serve
+      since: "2025-06-01"
+      criticality: important
+  support:
+    channel: "#trunk-data-and-docs"
+    contribution: closed

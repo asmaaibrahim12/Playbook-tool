@@ -1,0 +1,100 @@
+apiVersion: capability.taxfix.internal/v1
+kind: Capability
+
+metadata:
+  name: expense-categorisation
+  title: Expense Categorisation
+  trunk: data-and-docs
+  owner: "#trunk-data-and-docs"
+  summary: >-
+    Assigns a chart-of-accounts category and VAT treatment to a transaction or
+    extracted invoice, with confidence and an auditable reason.
+  lifecycle: experimental
+  graduated_from: business
+  tags: [llm, bookkeeping, categorisation]
+
+spec:
+  interface:
+    protocol: http
+    entrypoint: https://api.internal.taxfix/data-docs/v1/categorise
+    spec_ref: ./openapi/document-extraction.yaml   # PROTOTYPE: one spec written, the others would follow the same shape
+    auth: service-token (mTLS)
+    sdk: ["@taxfix/data-docs-js"]
+
+  scope:
+    does:
+      - Suggest a category from the market's chart of accounts
+      - Suggest a VAT rate and deductibility flag
+      - Return a short reason string for audit and for display to the user
+      - Learn per-account corrections (the user's own prior corrections win)
+    does_not:
+      - Post to the ledger — suggestion only, the caller commits
+      - Decide private vs business use where the split is a judgement call
+      - Handle non-EU VAT regimes
+    build_your_own_if:
+      - Your market's chart of accounts is not DE SKR03/SKR04, UK or ES
+      - You need deterministic rule-based categorisation for audit reasons
+        rather than a model suggestion
+    jurisdictions:
+      - market: DE
+        status: live
+        obligation: EÜR, UStVA
+        channel: ELSTER
+      - market: ES
+        status: in-progress
+        obligation: modelo 303, Verifactu
+        channel: AEAT
+        notes: Verifactu obligation for autónomos lands before 1 Jul 2027.
+      - market: UK
+        status: not-supported
+        obligation: MTD quarterly update
+        channel: HMRC MTD API
+    advice_boundary:
+      automated:
+        - Suggesting a category
+        - Applying a statutory VAT rate
+      requires_licensed_human:
+        - Confirming deductibility where private use is contested
+        - Any position the taxpayer intends to defend against a challenge
+      basis: §3 StBerG. Suggestion is software; assertion is advice.
+
+  evaluation:
+    method: >-
+      Labelled transaction set per market, stratified by category frequency.
+      Top-1 accuracy plus a separate figure for the long tail, because headline
+      accuracy is dominated by a handful of common categories.
+    eval_set_ref: ./evals/expense-categorisation/
+    metrics:
+      - name: top1_accuracy_overall
+        value: 0.92          # ASSUMPTION
+        measured_on: DE SKR03 set, n=12,000
+        as_of: "2026-09-30"
+      - name: top1_accuracy_long_tail
+        value: 0.64          # ASSUMPTION — the number that actually matters
+        measured_on: categories outside the top 20 by frequency
+        as_of: "2026-09-30"
+    known_failure_modes:
+      - Long-tail categories are materially worse than the headline suggests
+      - Mixed private/business expenses are systematically over-categorised as
+        business
+      - Subscription software invoices from US suppliers mis-handle reverse charge
+    self_service: true
+    human_fallback: Below threshold, surface as uncategorised rather than guessing.
+
+  cost:
+    unit: per transaction
+    amount_eur: 0.008        # ASSUMPTION
+    measure: Cost per accepted suggestion, net of corrections.
+    as_of: "2026-09-30"
+
+  consumers:
+    - orchard: business
+      market: DE
+      since: "2026-03-18"
+      criticality: blocking
+
+  support:
+    channel: "#trunk-data-and-docs"
+    response_target: 2 business days
+    contribution: open
+    contribution_guide: ./CONTRIBUTING.md

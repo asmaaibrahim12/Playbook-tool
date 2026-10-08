@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taxfix.internal/schema/capability/v1",
+  "title": "Trunk Capability Manifest",
+  "description": "One capability offered by a Trunk team to the Orchards. Single source of truth: rendered as docs for humans, served as JSON for agents.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": { "const": "capability.taxfix.internal/v1" },
+    "kind": { "enum": ["Capability"] },
+
+    "metadata": {
+      "type": "object",
+      "required": ["name", "trunk", "owner", "summary", "lifecycle"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Stable identifier. Never reused after retirement."
+        },
+        "title": { "type": "string" },
+        "trunk": {
+          "enum": ["data-and-docs", "tax-core-and-submission", "monetisation",
+                   "kyc-aml-pep", "user-management", "operational-tooling", "global-bookkeeping"]
+        },
+        "owner": {
+          "type": "string",
+          "description": "Slack handle of the owning team. A person is not a valid owner."
+        },
+        "summary": { "type": "string", "maxLength": 240 },
+        "lifecycle": {
+          "enum": ["experimental", "beta", "stable", "deprecated"],
+          "description": "experimental = an Orchard built it, not yet graduated. stable = Trunk-owned, supported."
+        },
+        "graduated_from": {
+          "type": "string",
+          "description": "Orchard that originally built this, if it arrived via inner source."
+        },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "spec": {
+      "type": "object",
+      "required": ["interface", "scope", "evaluation", "consumers", "support"],
+      "additionalProperties": false,
+      "properties": {
+
+        "interface": {
+          "type": "object",
+          "required": ["protocol", "entrypoint"],
+          "additionalProperties": false,
+          "properties": {
+            "protocol": { "enum": ["http", "grpc", "event", "library", "mcp"] },
+            "entrypoint": { "type": "string" },
+            "spec_ref": {
+              "type": "string",
+              "description": "Reference to the OpenAPI/AsyncAPI doc. Referenced, never copied — the spec stays single-source."
+            },
+            "auth": { "type": "string" },
+            "sdk": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+
+        "scope": {
+          "type": "object",
+          "required": ["does", "does_not", "build_your_own_if"],
+          "additionalProperties": false,
+          "description": "The honest boundary. A playbook that only says yes is not trusted and will be routed around.",
+          "properties": {
+            "does": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "does_not": {
+              "type": "array", "items": { "type": "string" }, "minItems": 1,
+              "description": "Explicit non-goals. The most-read field in the manifest."
+            },
+            "build_your_own_if": {
+              "type": "array", "items": { "type": "string" }, "minItems": 1,
+              "description": "Conditions under which an Orchard SHOULD build its own. Required: a platform that never says 'don't use me' gets discovered as a liar later."
+            },
+            "jurisdictions": {
+              "type": "array",
+              "description": "Capability varies by market as DATA, not as forked code.",
+              "items": {
+                "type": "object",
+                "required": ["market", "status"],
+                "additionalProperties": false,
+                "properties": {
+                  "market": { "enum": ["DE", "UK", "ES"] },
+                  "status": { "enum": ["live", "in-progress", "not-supported"] },
+                  "obligation": { "type": "string", "description": "e.g. UStVA, MTD quarterly update, modelo 303" },
+                  "channel": { "type": "string", "description": "e.g. ELSTER, HMRC MTD API, AEAT" },
+                  "notes": { "type": "string" }
+                }
+              }
+            },
+            "advice_boundary": {
+              "type": "object",
+              "description": "Where the regulatory perimeter sits for this capability. Market-configurable, because DE is software-only under StBerG while UK and ES bundle human review.",
+              "additionalProperties": false,
+              "required": ["automated", "requires_licensed_human"],
+              "properties": {
+                "automated": { "type": "array", "items": { "type": "string" } },
+                "requires_licensed_human": { "type": "array", "items": { "type": "string" } },
+                "basis": { "type": "string", "description": "Legal basis, e.g. §3 StBerG; BFH II R 22/15" }
+              }
+            }
+          }
+        },
+
+        "evaluation": {
+          "type": "object",
+          "description": "How an Orchard proves to itself that this works, without taking the Trunk's word for it. Platform owns the method; the Orchard sets its own threshold.",
+          "required": ["method", "metrics", "self_service"],
+          "additionalProperties": false,
+          "properties": {
+            "method": { "type": "string" },
+            "eval_set_ref": { "type": "string" },
+            "metrics": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["name", "value", "measured_on", "as_of"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "type": "string" },
+                  "value": { "type": ["number", "string"] },
+                  "unit": { "type": "string" },
+                  "measured_on": { "type": "string", "description": "Which eval set / population." },
+                  "as_of": { "type": "string", "format": "date" }
+                }
+              }
+            },
+            "known_failure_modes": { "type": "array", "items": { "type": "string" } },
+            "self_service": {
+              "type": "boolean",
+              "description": "Can a consuming team run this eval against its own data unaided? If false, the Trunk is a bottleneck for trust."
+            },
+            "human_fallback": { "type": "string", "description": "What happens when confidence is below threshold." }
+          }
+        },
+
+        "cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "unit": { "type": "string", "description": "e.g. per document processed" },
+            "amount_eur": { "type": "number" },
+            "measure": {
+              "type": "string",
+              "description": "Cost per SUCCESSFUL outcome, not per call. A cheap extraction that escalates to a tax expert is the expensive one."
+            },
+            "as_of": { "type": "string", "format": "date" }
+          }
+        },
+
+        "consumers": {
+          "type": "array",
+          "description": "Which Orchards depend on this today. Reach is scored from here, not from assertion.",
+          "items": {
+            "type": "object",
+            "required": ["orchard", "since"],
+            "additionalProperties": false,
+            "properties": {
+              "orchard": { "enum": ["self-serve", "assisted", "business"] },
+              "since": { "type": "string", "format": "date" },
+              "market": { "enum": ["DE", "UK", "ES"] },
+              "criticality": { "enum": ["blocking", "important", "convenience"] }
+            }
+          }
+        },
+
+        "support": {
+          "type": "object",
+          "required": ["channel", "contribution"],
+          "additionalProperties": false,
+          "properties": {
+            "channel": { "type": "string" },
+            "response_target": { "type": "string" },
+            "contribution": {
+              "enum": ["open", "review-required", "closed"],
+              "description": "Inner source posture. 'open' = raise a PR, do not raise a ticket."
+            },
+            "contribution_guide": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

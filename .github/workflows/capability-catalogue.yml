@@ -1,0 +1,45 @@
+name: Capability catalogue
+
+# The mechanism that answers "why won't this go stale like the Notion pages?"
+# It is not discipline. It is a failing build.
+
+on:
+  pull_request:
+  push: { branches: [main] }
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pyyaml jsonschema
+
+      # 1. Every manifest is schema-valid, fresh, and obeys the operating model.
+      - name: Validate manifests
+        run: python3 tools/validate.py
+
+      # 2. Any service directory without a manifest fails. A capability cannot
+      #    ship undocumented, because shipping IS documenting.
+      - name: Every service has a manifest
+        run: |
+          missing=0
+          for svc in services/*/; do
+            name=$(basename "$svc")
+            if [ ! -f "capabilities/$name.yaml" ]; then
+              echo "::error::service '$name' has no capability manifest"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      # 3. Docs are generated, never authored. If the committed docs differ from
+      #    what the manifests produce, someone edited the output.
+      - name: Docs match manifests
+        run: |
+          python3 tools/render.py docs/
+          git diff --exit-code docs/ || {
+            echo "::error::docs/ is out of date — run tools/render.py and commit"
+            exit 1
+          }
