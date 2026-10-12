@@ -26,6 +26,17 @@ Extracts tax-relevant fields from uploaded documents (payslips, invoices, receip
 - You need sub-200ms synchronous extraction inside a live user flow
 - You are prototyping and do not yet know which fields you need
 
+## How much of this can you do without us?
+
+### L2 — you build on it without us
+
+Integrate straight from the spec and the SDK. No Trunk ticket in your path.
+
+- Run the eval on your own data: **yes**
+- Contribution: **open — raise a PR, not a ticket**
+
+> **Next rung:** Add a sandbox token so a team can integrate without asking us for credentials.
+
 ## By market
 
 | Market | Status | Obligation | Channel |
@@ -54,8 +65,6 @@ Requires a licensed human:
 *Basis: §3 StBerG reserves commercial tax assistance to licensed professions. §6 exceptions do not extend to preparing UStVA for others (BFH 7 June 2017, II R 22/15). DE is software-only; UK and ES bundle human review inside the subscription, so this boundary is configured per market rather than assumed globally.*
 
 ## Does it actually work?
-
-**You can verify this yourself.**
 
 Held-out labelled document set per type and market. Field-level exact match for structured fields, normalised match for free text. Run it yourself: `npx @taxfix/data-docs eval --set <your-set> --market DE`
 
@@ -87,11 +96,10 @@ Held-out labelled document set per type and market. Field-level exact match for 
 | business | DE | 2026-03-18 | blocking |
 | assisted | DE | 2025-01-15 | important |
 
-## Support and contribution
+## Who do you ask
 
 - Channel: #trunk-data-and-docs
 - Response target: 1 business day
-- Contribution: **open** — raise a PR, don't raise a ticket.
 
 ## Integrate
 

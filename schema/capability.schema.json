@@ -10,6 +10,7 @@
     "metadata",
     "scope",
     "build_your_own_if",
+    "self_service",
     "availability",
     "evaluation",
     "cost",
@@ -122,7 +123,7 @@
     },
     "availability": {
       "type": "object",
-      "description": "Question 3: does it work where I am? Market differences are data here, not forked code.",
+      "description": "Question 5: does it work where I am? Market differences are data here, not forked code.",
       "required": [
         "markets"
       ],
@@ -198,18 +199,13 @@
     },
     "evaluation": {
       "type": "object",
-      "description": "Question 4: is it good enough for my risk? The platform owns the method; each consuming team sets its own threshold.",
+      "description": "Question 6: is it good enough for my risk? The platform owns the method; each consuming team sets its own threshold.",
       "required": [
-        "self_service",
         "method",
         "metrics"
       ],
       "additionalProperties": false,
       "properties": {
-        "self_service": {
-          "type": "boolean",
-          "description": "First field on purpose. Can a consuming team run this eval against its own data unaided? If not, the platform team is the only one who can say the capability works, which is a bottleneck on trust."
-        },
         "method": {
           "type": "string"
         },
@@ -274,7 +270,7 @@
     },
     "cost": {
       "type": "object",
-      "description": "Question 5: what does it cost me? Required \u2014 a capability nobody can price is a capability nobody can budget for.",
+      "description": "Question 7: what does it cost me? Required \u2014 a capability nobody can price is a capability nobody can budget for.",
       "required": [
         "unit",
         "measure",
@@ -309,7 +305,7 @@
     },
     "interface": {
       "type": "object",
-      "description": "Question 6: how do I call it? Last of the decision fields, because nobody needs an entrypoint for a capability they have decided against.",
+      "description": "Question 8: how do I call it? Last of the decision fields, because nobody needs an entrypoint for a capability they have decided against.",
       "required": [
         "protocol",
         "entrypoint"
@@ -345,7 +341,7 @@
     },
     "consumers": {
       "type": "array",
-      "description": "Question 7: who else relies on this? Reach is read from here rather than asserted in a planning meeting.",
+      "description": "Question 9: who else relies on this? Reach is read from here rather than asserted in a planning meeting.",
       "items": {
         "type": "object",
         "required": [
@@ -384,10 +380,9 @@
     },
     "support": {
       "type": "object",
-      "description": "Question 8: who do I ask, and can I just fix it myself?",
+      "description": "Question 10: who do I ask, and can I just fix it myself?",
       "required": [
-        "channel",
-        "contribution"
+        "channel"
       ],
       "additionalProperties": false,
       "properties": {
@@ -396,17 +391,43 @@
         },
         "response_target": {
           "type": "string"
+        }
+      }
+    },
+    "self_service": {
+      "type": "object",
+      "description": "Question 4: how much of this can I do without you? The level matches the ladder in the prioritisation framework, so the share of capabilities at L2 or above is measured from these files rather than estimated.",
+      "required": [
+        "level",
+        "can_run_eval",
+        "can_contribute"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "L3"
+          ],
+          "description": "L0 we build it and close the ticket \u00b7 L1 we build it and write down how \u00b7 L2 you build on it without us \u00b7 L3 you extend it yourself"
         },
-        "contribution": {
+        "can_run_eval": {
+          "type": "boolean",
+          "description": "Can a consuming team verify this against its own data unaided? If not, we are the only ones who can say it works, which caps the level at L1 whatever else is true."
+        },
+        "can_contribute": {
           "enum": [
             "open",
             "review-required",
             "closed"
           ],
-          "description": "Inner source posture. 'open' means raise a PR, not a ticket."
+          "description": "open means raise a PR, not a ticket. L3 requires open."
         },
-        "contribution_guide": {
-          "type": "string"
+        "to_reach_next_level": {
+          "type": "string",
+          "description": "What would have to be true to move up. The platform's own backlog, written where consumers can read it."
         }
       }
     }

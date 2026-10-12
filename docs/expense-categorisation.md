@@ -25,6 +25,17 @@ Assigns a chart-of-accounts category and VAT treatment to a transaction or extra
 - Your market's chart of accounts is not DE SKR03/SKR04, UK or ES
 - You need deterministic rule-based categorisation for audit reasons rather than a model suggestion
 
+## How much of this can you do without us?
+
+### L1 — we build it, and write down how
+
+Documented, but the work still lands on the Trunk's backlog.
+
+- Run the eval on your own data: **yes**
+- Contribution: **open — raise a PR, not a ticket**
+
+> **Next rung:** Publish the eval set and the SDK. Today a team has to pair with us to integrate, which is what keeps this at L1.
+
 ## By market
 
 | Market | Status | Obligation | Channel |
@@ -50,8 +61,6 @@ Requires a licensed human:
 *Basis: §3 StBerG. Suggestion is software; assertion is advice.*
 
 ## Does it actually work?
-
-**You can verify this yourself.**
 
 Labelled transaction set per market, stratified by category frequency. Top-1 accuracy plus a separate figure for the long tail, because headline accuracy is dominated by a handful of common categories.
 
@@ -80,11 +89,10 @@ Labelled transaction set per market, stratified by category frequency. Top-1 acc
 |---|---|---|---|
 | business | DE | 2026-03-18 | blocking |
 
-## Support and contribution
+## Who do you ask
 
 - Channel: #trunk-data-and-docs
 - Response target: 2 business days
-- Contribution: **open** — raise a PR, don't raise a ticket.
 
 ## Integrate
 

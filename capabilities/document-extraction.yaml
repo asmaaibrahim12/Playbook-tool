@@ -29,6 +29,12 @@ build_your_own_if:
   integration cost will exceed the benefit
 - You need sub-200ms synchronous extraction inside a live user flow
 - You are prototyping and do not yet know which fields you need
+self_service:
+  level: L2
+  can_run_eval: true
+  can_contribute: open
+  to_reach_next_level: Add a sandbox token so a team can integrate without asking us for
+    credentials.
 availability:
   markets:
   - market: DE
@@ -62,7 +68,6 @@ availability:
       UK and ES bundle human review inside the subscription, so this boundary is configured
       per market rather than assumed globally.
 evaluation:
-  self_service: true
   method: 'Held-out labelled document set per type and market. Field-level exact match for
     structured fields, normalised match for free text. Run it yourself: `npx @taxfix/data-docs
     eval --set <your-set> --market DE`'
@@ -122,5 +127,3 @@ consumers:
 support:
   channel: '#trunk-data-and-docs'
   response_target: 1 business day
-  contribution: open
-  contribution_guide: ./CONTRIBUTING.md

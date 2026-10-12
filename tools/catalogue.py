@@ -11,8 +11,8 @@ index an agent queries are the same bytes.
 Usage:
   python3 tools/catalogue.py search "extract data from an invoice"
   python3 tools/catalogue.py describe document-extraction
-  python3 tools/catalogue.py can-i "file an income tax return" --orchard business --market DE
-  python3 tools/catalogue.py consumers-of income-tax-return-assembly
+  python3 tools/catalogue.py can-i "categorise a business expense" --orchard business --market DE
+  python3 tools/catalogue.py consumers-of document-intake
 """
 import argparse
 import os
@@ -37,6 +37,13 @@ def _tokens(text):
 
 STOP = _tokens("the and for with from that this you your can does not able into")
 
+LADDER = {
+    "L0": "we build it and close the ticket",
+    "L1": "we build it and write down how",
+    "L2": "you build on it without us",
+    "L3": "you extend it yourself",
+}
+
 
 def tool_search(query, docs):
     """Rank capabilities against a natural-language need."""
@@ -60,6 +67,7 @@ def tool_search(query, docs):
             "title": m.get("title", m["name"]),
             "trunk": m["trunk"],
             "lifecycle": m["lifecycle"],
+            "self_service": d["self_service"]["level"],
             "summary": m["summary"].strip(),
             "score": len(hits),
             "matched_on": sorted(hits),
@@ -135,8 +143,9 @@ def tool_can_i(need, orchard, market, docs):
     elif j["status"] == "in-progress":
         verdict, guidance = "in-progress", (
             f"{top['name']} is being built for {market}. Talk to "
-            f"{full['metadata']['owner']} before starting your own — "
-            f"contribution is '{full['support']['contribution']}'."
+            f"{full['metadata']['owner']} before starting your own — contribution "
+            f"is '{full['self_service']['can_contribute']}', so you may be able to "
+            f"land the {market} work yourself."
         )
     else:
         verdict, guidance = "not-supported", (
@@ -163,7 +172,15 @@ def tool_can_i(need, orchard, market, docs):
             "market_note": (j or {}).get("notes"),
             "your_orchard_already_uses_it": bool(uses_it_now),
             "build_your_own_if": full["build_your_own_if"],
-            "evaluation_self_service": full["evaluation"]["self_service"],
+            # How much of this you can do without the Trunk. The agent needs
+            # this as much as the market status: "live" at L0 still means you
+            # are waiting on someone else's backlog.
+            "self_service": {
+                "level": full["self_service"]["level"],
+                "means": LADDER[full["self_service"]["level"]],
+                "can_run_eval": full["self_service"]["can_run_eval"],
+                "can_contribute": full["self_service"]["can_contribute"],
+            },
             "owner": full["metadata"]["owner"],
         },
     }

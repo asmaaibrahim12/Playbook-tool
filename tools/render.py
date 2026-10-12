@@ -18,6 +18,23 @@ BADGE = {"stable": "🟢 stable", "beta": "🟡 beta",
          "experimental": "🔵 experimental", "deprecated": "🔴 deprecated"}
 STATUS = {"live": "✅ live", "in-progress": "🚧 in progress", "not-supported": "⛔ not supported"}
 
+# The ladder, written out once here and once in the schema's enum description.
+# Nowhere else — a level means the same thing on every page because every page
+# is generated from the same field.
+LADDER = {
+    "L0": ("L0 — we build it, ticket closed",
+           "Every change goes through the Trunk. Nothing here you can do unaided."),
+    "L1": ("L1 — we build it, and write down how",
+           "Documented, but the work still lands on the Trunk's backlog."),
+    "L2": ("L2 — you build on it without us",
+           "Integrate straight from the spec and the SDK. No Trunk ticket in your path."),
+    "L3": ("L3 — you extend it yourself",
+           "Open to pull requests. You can change the capability, not only call it."),
+}
+CONTRIB = {"open": "open — raise a PR, not a ticket",
+           "review-required": "review required — PRs welcome, Trunk approves",
+           "closed": "closed — the Trunk is the only author"}
+
 
 def render_one(d):
     m, s = d["metadata"], d
@@ -31,6 +48,17 @@ def render_one(d):
     L += ["**It does**", ""] + [f"- {x}" for x in s["scope"]["does"]] + [""]
     L += ["**It does not**", ""] + [f"- {x}" for x in s["scope"]["does_not"]] + [""]
     L += ["**Build your own if**", ""] + [f"- {x}" for x in s["build_your_own_if"]] + [""]
+
+    ss = s["self_service"]
+    head, meaning = LADDER[ss["level"]]
+    L += ["## How much of this can you do without us?", "", f"### {head}", "", meaning, "",
+          f"- Run the eval on your own data: **{'yes' if ss['can_run_eval'] else 'no'}**"
+          + ("" if ss["can_run_eval"]
+             else " — only the Trunk can say whether this works for your case. "
+                  "That is a bottleneck on trust, and no uptime dashboard shows it."),
+          f"- Contribution: **{CONTRIB[ss['can_contribute']]}**", ""]
+    if ss.get("to_reach_next_level"):
+        L += [f"> **Next rung:** {ss['to_reach_next_level'].strip()}", ""]
 
     if s["availability"]["markets"]:
         L += ["## By market", "", "| Market | Status | Obligation | Channel |", "|---|---|---|---|"]
@@ -54,9 +82,7 @@ def render_one(d):
         L.append("")
 
     ev = s["evaluation"]
-    L += ["## Does it actually work?", "",
-          f"{'**You can verify this yourself.**' if ev['self_service'] else '⚠️ **Not self-service** — you must ask the Trunk to verify. Treat that as a bottleneck.'}",
-          "", ev["method"].strip(), "",
+    L += ["## Does it actually work?", "", ev["method"].strip(), "",
           "| Metric | Value | Source | Measured on | As of |", "|---|---|---|---|---|"]
     for mt in ev["metrics"]:
         src = "measured" if mt.get("source") == "measured" else "**assumed**"
@@ -81,12 +107,9 @@ def render_one(d):
     L.append("")
 
     sp = s["support"]
-    L += ["## Support and contribution", "",
+    L += ["## Who do you ask", "",
           f"- Channel: {sp['channel']}",
-          f"- Response target: {sp.get('response_target','—')}",
-          f"- Contribution: **{sp['contribution']}**"
-          + (" — raise a PR, don't raise a ticket." if sp["contribution"] == "open" else ""),
-          ""]
+          f"- Response target: {sp.get('response_target','—')}", ""]
 
     L += ["## Integrate", "",
           "```", f"{s['interface']['protocol'].upper()}  {s['interface']['entrypoint']}", "```", ""]
@@ -103,18 +126,35 @@ def main():
     docs = [yaml.safe_load(p.read_text())
             for p in sorted((ROOT / "capabilities").glob("*.yaml"))]
 
-    index = ["# Trunk capability catalogue", "",
+    trunk = sorted({d["metadata"]["trunk"] for d in docs})
+    levels = [d["self_service"]["level"] for d in docs]
+    at_l2 = sum(1 for l in levels if l in ("L2", "L3"))
+
+    index = ["# Capability catalogue — " + ", ".join(f"`{t}`" for t in trunk), "",
+             f"**{at_l2} of {len(docs)} capabilities are at L2 or above** — a consuming "
+             "team can build on them without a ticket. That number is read off the "
+             "manifests, not estimated.", "",
              "Every page here is generated from a manifest. If a page is wrong, "
              "the manifest is wrong — and CI will tell you.", "",
-             "| Capability | Trunk | Status | Orchards | Summary |", "|---|---|---|---|---|"]
+             "| Capability | Self-service | Status | Orchards | Summary |",
+             "|---|---|---|---|---|"]
     for d in docs:
         m, s = d["metadata"], d
         n_orch = len({c["orchard"] for c in s["consumers"]})
-        index.append(f"| [{m.get('title', m['name'])}](./{m['name']}.md) | `{m['trunk']}` "
+        index.append(f"| [{m.get('title', m['name'])}](./{m['name']}.md) "
+                     f"| **{s['self_service']['level']}** "
                      f"| {BADGE[m['lifecycle']]} | {n_orch} | {m['summary'].strip()[:80]}… |")
         (outdir / f"{m['name']}.md").write_text(render_one(d))
+
+    index += ["",
+              "**L0** we build it and close the ticket · **L1** we build it and write "
+              "down how · **L2** you build on it without us · **L3** you extend it "
+              "yourself.", "",
+              "The level is a required field in every manifest, so moving a capability "
+              "up a rung is a commit someone can review — not a claim in a slide.", ""]
     (outdir / "index.md").write_text("\n".join(index) + "\n")
     print(f"Rendered {len(docs)} capability page(s) + index to {outdir}/")
+    print(f"Self-service: {at_l2}/{len(docs)} at L2 or above")
 
 
 if __name__ == "__main__":

@@ -45,7 +45,19 @@ build_your_own_if:
   - TODO a condition under which a team SHOULD build their own instead
   # Required. A catalogue that never says "don't use me" gets found out later.
 
-# ─── 3. Does it work where I am? ─────────────────────────────────────────────
+# ─── 3. How much can I do without you? ──────────────────────────────────────
+self_service:
+  level: L0                        # L0 we build it and close the ticket
+                                   # L1 we build it and write down how
+                                   # L2 you build on it without us
+                                   # L3 you extend it yourself
+  can_run_eval: false              # can a consuming team run the eval unaided?
+  can_contribute: closed           # open | review-required | closed
+  to_reach_next_level: TODO        # required below L2 — what is actually missing
+  # The validator checks this against reality: you cannot claim L2 while
+  # consumers can't run the eval, and L3 needs contribution open.
+
+# ─── 4. Does it work where I am? ─────────────────────────────────────────────
 availability:
   markets:
     - market: DE                   # DE | UK | ES
@@ -60,9 +72,8 @@ availability:
   #     - TODO what must route to a licensed advisor
   #   basis: TODO e.g. §3 StBerG
 
-# ─── 4. Is it good enough for my risk? ───────────────────────────────────────
+# ─── 5. Is it good enough for my risk? ───────────────────────────────────────
 evaluation:
-  self_service: false              # can a consuming team run this eval unaided?
   method: TODO how someone proves this works, including the command to run
   eval_set_ref: ./evals/{name}/
   metrics:
@@ -75,7 +86,7 @@ evaluation:
     - TODO where it breaks
   human_fallback: TODO what happens below the caller's threshold
 
-# ─── 5. What does it cost me? ────────────────────────────────────────────────
+# ─── 6. What does it cost me? ────────────────────────────────────────────────
 cost:
   unit: TODO e.g. per document processed
   amount_eur: 0.0
@@ -83,7 +94,7 @@ cost:
   as_of: "{today}"
   source: assumed
 
-# ─── 6. How do I call it? ────────────────────────────────────────────────────
+# ─── 7. How do I call it? ────────────────────────────────────────────────────
 interface:
   protocol: http                   # http | grpc | event | library | mcp
   entrypoint: TODO
@@ -91,19 +102,17 @@ interface:
   auth: TODO
   sdk: []
 
-# ─── 7. Who else relies on it? ───────────────────────────────────────────────
+# ─── 8. Who else relies on it? ───────────────────────────────────────────────
 consumers: []
   # - orchard: business            # self-serve | assisted | business
   #   market: DE
   #   since: "{today}"
   #   criticality: blocking        # blocking | important | convenience
 
-# ─── 8. Who do I ask? ────────────────────────────────────────────────────────
+# ─── 9. Who do I ask? ────────────────────────────────────────────────────────
 support:
   channel: "#trunk-{trunk}"
   response_target: TODO e.g. 1 business day
-  contribution: open               # open | review-required | closed
-  contribution_guide: ./CONTRIBUTING.md
 """
 
 

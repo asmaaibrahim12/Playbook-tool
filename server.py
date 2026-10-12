@@ -128,38 +128,49 @@ async def index(request):
         m, s = d["metadata"], d
         cls = {"stable": "ok", "beta": "warn", "experimental": ""}[m["lifecycle"]]
         n = len({c["orchard"] for c in s["consumers"]})
+        lvl = s["self_service"]["level"]
         rows.append(
             f'<tr><td><a href="/c/{m["name"]}">{m.get("title", m["name"])}</a></td>'
-            f'<td><code>{m["trunk"]}</code></td>'
+            f'<td><span class="badge {"ok" if lvl in ("L2", "L3") else "warn"}">{lvl}</span></td>'
             f'<td><span class="badge {cls}">{m["lifecycle"]}</span></td>'
             f'<td>{n}</td><td>{m["summary"].strip()}</td></tr>'
         )
+    trunks = sorted({d["metadata"]["trunk"] for d in docs})
+    levels = [d["self_service"]["level"] for d in docs]
+    at_l2 = sum(1 for l in levels if l in ("L2", "L3"))
     def opts(vals, sel):
         return "".join(f'<option value="{v}"{" selected" if v == sel else ""}>{v}</option>'
                        for v in vals)
     orchard_opts, market_opts = opts(ORCHARDS, "business"), opts(MARKETS, "DE")
 
     body = f"""<header>
-<p class="eyebrow">Capability playbook</p>
-<h1>What the platform already does</h1>
-<p class="lede">One manifest per capability, living beside the code. This page and
-the JSON API below are both generated from those files.</p>
+<p class="eyebrow">Capability playbook &middot; {', '.join(f'<code>{t}</code>' for t in trunks)}</p>
+<h1>How much can you do without us?</h1>
+<p class="lede">One manifest per capability, living beside the code. Each one
+declares how far a consuming team can get on its own &mdash; so
+<b>{at_l2} of {len(docs)}</b> at L2 or above is a number read off the files, not
+an estimate in a slide.</p>
 </header>
 <h2>Capabilities</h2>
-<table><tr><th>Capability</th><th>Team</th><th>Status</th><th>Teams using it</th>
+<table><tr><th>Capability</th><th>Self-service</th><th>Status</th><th>Teams using it</th>
 <th>Summary</th></tr>{''.join(rows)}</table>
+<p class="hint"><b>L0</b> we build it and close the ticket ·
+<b>L1</b> we build it and write down how ·
+<b>L2</b> you build on it without us ·
+<b>L3</b> you extend it yourself</p>
 <h2>Ask it something</h2>
 <p class="lede">The question a builder actually has. The answer separates what the
 catalogue <em>guessed</em> from what a manifest <em>declares</em>, because a
 catalogue that sounds certain when it is not is worse than one that says so.</p>
 <form class="ask" method="get" action="/ask">
-<input name="need" value="file an income tax return" placeholder="what are you trying to do?" aria-label="What are you trying to do?">
+<input name="need" value="extract fields from an uploaded payslip" placeholder="what are you trying to do?" aria-label="What are you trying to do?">
 <label>I am on <select name="orchard">{orchard_opts}</select></label>
 <label>in <select name="market">{market_opts}</select></label>
 <button type="submit">Ask</button>
 </form>
-<p class="hint">Try <a href="/ask?need=file+a+VAT+advance+return&amp;orchard=business&amp;market=DE">something nothing here does</a>
-· <a href="/ask?need=read+values+off+an+invoice&amp;orchard=business&amp;market=DE">something it does</a>
+<p class="hint">Try <a href="/ask?need=extract+fields+from+an+uploaded+payslip&amp;orchard=business&amp;market=DE">something it does</a>
+· <a href="/ask?need=file+a+VAT+advance+return&amp;orchard=business&amp;market=DE">something it guesses wrong</a>
+· <a href="/ask?need=reconcile+a+bank+statement&amp;orchard=business&amp;market=DE">something nothing here does</a>
 · or the raw <a href="/api">JSON API</a></p>
 <div class="note"><strong>Prototype.</strong> Every accuracy, cost and throughput
 figure in these manifests is invented, and each one carries
@@ -240,7 +251,9 @@ overlap, not meaning. {('Other candidates: ' + ', '.join(f'<code>{esc(c)}</code>
 {f'<div class="note">{esc(facts["market_note"])}</div>' if facts.get("market_note") else ''}
 <table>
 <tr><th>Your team already uses it</th><td>{'yes' if facts['your_orchard_already_uses_it'] else 'no'}</td></tr>
-<tr><th>You can run the eval yourself</th><td>{'yes' if facts['evaluation_self_service'] else 'no'}</td></tr>
+<tr><th>Self-service</th><td><b>{esc(facts['self_service']['level'])}</b> &mdash; {esc(facts['self_service']['means'])}</td></tr>
+<tr><th>You can run the eval yourself</th><td>{'yes' if facts['self_service']['can_run_eval'] else 'no'}</td></tr>
+<tr><th>You can change it yourself</th><td>{esc(facts['self_service']['can_contribute'])}</td></tr>
 <tr><th>Owner</th><td>{esc(facts['owner'])}</td></tr>
 </table>
 <h3>Build your own if</h3>

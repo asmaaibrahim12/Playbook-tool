@@ -1,0 +1,111 @@
+apiVersion: capability.taxfix.internal/v1
+kind: Capability
+metadata:
+  name: document-intake
+  title: Document Intake
+  trunk: data-and-docs
+  owner: '#trunk-data-and-docs'
+  summary: Receives an uploaded document, validates and stores it, and emits an event the
+    rest of the pipeline listens for.
+  lifecycle: stable
+  tags:
+  - upload
+  - storage
+  - gdpr
+scope:
+  does:
+  - Accept an upload over HTTP and validate type, size and page count
+  - Store it against a user with a retention clock and an audit trail
+  - Emit document.received so extraction and anything else can pick it up
+  - Serve the original back, with every access logged
+  does_not:
+  - Read anything out of the document — see document-extraction
+  - Accept bulk or batch upload; this is one document per request
+  - Accept files over 20 MB or 40 pages
+  - Store anything outside the EU
+build_your_own_if:
+- You need batch ingest of thousands of documents. This is built for a person uploading
+  one thing, and the per-request overhead will hurt you
+- Your documents never need to be served back to a user, in which case you want object
+  storage rather than this
+self_service:
+  level: L3
+  can_run_eval: true
+  can_contribute: open
+  to_reach_next_level: Already at L3. Two Orchards have merged changes here; the Business
+    Orchard added page-count validation in May.
+availability:
+  markets:
+  - market: DE
+    status: live
+    obligation: Einkommensteuererklärung, EÜR
+    channel: ELSTER
+  - market: UK
+    status: live
+    obligation: Self Assessment
+    channel: HMRC
+  - market: ES
+    status: live
+    obligation: Renta
+    channel: AEAT
+  advice_boundary:
+    automated:
+    - Accepting, storing and serving a document
+    - Applying a retention policy
+    requires_licensed_human:
+    - Nothing. Intake moves bytes and never reads them, so the advice boundary does not
+      apply here.
+    basis: §3 StBerG does not reach storage.
+evaluation:
+  method: 'Upload a corpus of known-good and known-bad files and assert the accept/reject
+    decision and the emitted event. Run it yourself: `npx @taxfix/data-docs eval --set <your-set>
+    --capability document-intake`'
+  eval_set_ref: ./evals/document-intake/
+  metrics:
+  - name: accept_decision_accuracy
+    value: 0.999
+    measured_on: mixed valid/invalid corpus, n=8,000
+    as_of: '2026-09-30'
+    source: assumed
+  - name: p99_upload_latency_ms
+    value: 840
+    unit: ms
+    measured_on: DE production traffic
+    as_of: '2026-09-30'
+    source: assumed
+  known_failure_modes:
+  - Scanned TIFFs from older office scanners are rejected as unsupported
+  - A document uploaded twice within the same session creates two records
+  human_fallback: A rejected upload returns the reason to the caller, who decides whether
+    to ask the user for a different file.
+cost:
+  unit: per document stored per year
+  amount_eur: 0.004
+  measure: Cost per document retained, not per upload. Retention is the cost that compounds;
+    the upload itself is close to free.
+  as_of: '2026-09-30'
+  source: assumed
+interface:
+  protocol: http
+  entrypoint: https://api.internal.taxfix/data-docs/v1/documents
+  spec_ref: ./openapi/document-extraction.yaml   # PROTOTYPE: one spec written, the others would follow the same shape
+  auth: service-token (mTLS)
+  sdk:
+  - '@taxfix/data-docs-js'
+  - taxfix-data-docs-py
+consumers:
+- orchard: self-serve
+  market: DE
+  since: '2019-01-01'
+  criticality: blocking
+- orchard: assisted
+  market: DE
+  since: '2023-01-01'
+  criticality: blocking
+- orchard: self-serve
+  market: UK
+  since: '2024-07-02'
+  criticality: blocking
+support:
+  channel: '#trunk-data-and-docs'
+  response_target: 4 hours

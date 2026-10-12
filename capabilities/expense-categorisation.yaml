@@ -27,6 +27,12 @@ build_your_own_if:
 - Your market's chart of accounts is not DE SKR03/SKR04, UK or ES
 - You need deterministic rule-based categorisation for audit reasons rather than a model
   suggestion
+self_service:
+  level: L1
+  can_run_eval: true
+  can_contribute: open
+  to_reach_next_level: Publish the eval set and the SDK. Today a team has to pair with us
+    to integrate, which is what keeps this at L1.
 availability:
   markets:
   - market: DE
@@ -51,7 +57,6 @@ availability:
     - Any position the taxpayer intends to defend against a challenge
     basis: §3 StBerG. Suggestion is software; assertion is advice.
 evaluation:
-  self_service: true
   method: Labelled transaction set per market, stratified by category frequency. Top-1 accuracy
     plus a separate figure for the long tail, because headline accuracy is dominated by
     a handful of common categories.
@@ -93,5 +98,3 @@ consumers:
 support:
   channel: '#trunk-data-and-docs'
   response_target: 2 business days
-  contribution: open
-  contribution_guide: ./CONTRIBUTING.md

@@ -62,31 +62,51 @@ def check_placeholders(doc, name):
 def check_trust_rules(doc, name):
     """Rules that encode the operating model, not just the data shape."""
     problems = []
-    spec = doc
-    meta = doc["metadata"]
+    meta, ss = doc["metadata"], doc["self_service"]
+    level = ss["level"]
 
-    # A stable capability whose eval cannot be run by its consumers makes the
-    # Trunk the sole arbiter of whether it works. That is a bottleneck for trust.
-    if meta["lifecycle"] == "stable" and not spec["evaluation"]["self_service"]:
+    # You cannot claim a level you have not earned. A team that cannot verify a
+    # capability against its own data is still dependent on us, whatever the
+    # integration looks like.
+    if level in ("L2", "L3") and not ss["can_run_eval"]:
         problems.append(
-            f"{name}: lifecycle 'stable' requires evaluation.self_service=true — "
-            "consumers must be able to verify it without asking the Trunk"
+            f"{name}: claims {level} but can_run_eval is false — a team that cannot "
+            "verify it without us is not self-serving, whatever else is true"
         )
 
-    # A capability with consumers in 2+ Orchards that is still closed to
-    # contribution contradicts the inner-source model.
-    orchards = {c["orchard"] for c in spec["consumers"]}
-    if len(orchards) >= 2 and spec["support"]["contribution"] == "closed":
+    # L3 means they extend it. That is impossible if we refuse their changes.
+    if level == "L3" and ss["can_contribute"] != "open":
         problems.append(
-            f"{name}: serves {len(orchards)} Orchards but contribution is 'closed' — "
+            f"{name}: claims L3 but can_contribute is '{ss['can_contribute']}' — "
+            "extending a capability means merging someone else's change"
+        )
+
+    # A capability serving several Orchards that refuses PRs is a service desk.
+    orchards = {c["orchard"] for c in doc["consumers"]}
+    if len(orchards) >= 2 and ss["can_contribute"] == "closed":
+        problems.append(
+            f"{name}: serves {len(orchards)} Orchards but can_contribute is 'closed' — "
             "shared capability must accept PRs or it becomes a queue"
         )
 
-    # Blocking consumers deserve a stated fallback.
-    blocking = [c for c in spec["consumers"] if c.get("criticality") == "blocking"]
-    if blocking and not spec["evaluation"].get("human_fallback"):
+    # Stable means supported, and support that only we can give is not support.
+    if meta["lifecycle"] == "stable" and not ss["can_run_eval"]:
+        problems.append(
+            f"{name}: lifecycle 'stable' requires self_service.can_run_eval=true"
+        )
+
+    # Anything another team's roadmap depends on needs a stated fallback.
+    blocking = [c for c in doc["consumers"] if c.get("criticality") == "blocking"]
+    if blocking and not doc["evaluation"].get("human_fallback"):
         problems.append(
             f"{name}: {len(blocking)} blocking consumer(s) but no human_fallback declared"
+        )
+
+    # Below L2 we should be able to say what would move it up.
+    if level in ("L0", "L1") and not ss.get("to_reach_next_level"):
+        problems.append(
+            f"{name}: at {level} with no to_reach_next_level — if we cannot say what "
+            "would raise it, it will stay there"
         )
 
     return problems
@@ -121,6 +141,14 @@ def main():
         for p in problems:
             print(f"  FAIL  {p}")
         return 1
+
+    # Reported only once everything passes, on purpose. A self-service level is
+    # a claim; until the rules above hold, counting it would be reporting what
+    # teams wrote down rather than what they earned.
+    levels = [yaml.safe_load(f.read_text())["self_service"]["level"] for f in files]
+    at_l2 = sum(1 for l in levels if l in ("L2", "L3"))
+    print(f"Self-service: {at_l2}/{len(files)} at L2 or above "
+          f"({', '.join(sorted(levels))})")
     print("All checks passed.")
     return 0
 

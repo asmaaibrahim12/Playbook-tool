@@ -1,4 +1,4 @@
-# Deliberately broken. Four separate problems, only one of which is about
+# Deliberately broken. Five separate problems, only one of which is about
 # documentation. Run: python3 tools/validate.py demo/failing
 apiVersion: capability.taxfix.internal/v1
 kind: Capability
@@ -9,7 +9,7 @@ metadata:
   trunk: data-and-docs
   owner: "#trunk-data-and-docs"
   summary: Matches receipts to bank transactions.
-  lifecycle: stable          # PROBLEM 2: stable, but self_service is false below
+  lifecycle: stable          # PROBLEM 3: stable, but consumers can't run the eval
 
 scope:
   does:
@@ -20,6 +20,16 @@ scope:
 build_your_own_if:
   - You need real-time matching inside a live user flow
 
+# PROBLEM 2: claims L2 — "you build on it without us" — while can_run_eval is
+# false. You cannot hand a team self-service on a capability only you can
+# prove works. This is the rung nobody can skip.
+# PROBLEM 4: can_contribute closed, with two Orchards depending on it. That is
+# the definition of a service desk.
+self_service:
+  level: L2
+  can_run_eval: false
+  can_contribute: closed
+
 availability:
   markets:
     - market: DE
@@ -28,7 +38,6 @@ availability:
       channel: ELSTER
 
 evaluation:
-  self_service: false        # PROBLEM 2: consumers cannot verify this themselves
   method: Labelled match set, scored on exact transaction match.
   metrics:
     - name: match_accuracy
@@ -36,7 +45,7 @@ evaluation:
       measured_on: DE set
       as_of: "2025-01-10"    # PROBLEM 1: well past the 180-day freshness limit
       source: assumed
-  # PROBLEM 4: blocking consumer below, but no human_fallback declared
+  # PROBLEM 5: blocking consumer below, but no human_fallback declared
 
 cost:
   unit: per receipt
@@ -60,4 +69,3 @@ consumers:
 
 support:
   channel: "#trunk-data-and-docs"
-  contribution: closed       # PROBLEM 3: two Orchards depend on it, PRs refused
