@@ -169,7 +169,8 @@ catalogue that sounds certain when it is not is worse than one that says so.</p>
 <button type="submit">Ask</button>
 </form>
 <p class="hint">Try <a href="/ask?need=extract+fields+from+an+uploaded+payslip&amp;orchard=business&amp;market=DE">something it does</a>
-· <a href="/ask?need=file+a+VAT+advance+return&amp;orchard=business&amp;market=DE">something it guesses wrong</a>
+· <a href="/ask?need=extract+fields+from+an+uploaded+payslip&amp;orchard=business&amp;market=UK">the same need, different market</a>
+· <a href="/ask?need=file+a+VAT+advance+return&amp;orchard=business&amp;market=DE">something it isn&rsquo;t sure about</a>
 · <a href="/ask?need=reconcile+a+bank+statement&amp;orchard=business&amp;market=DE">something nothing here does</a>
 · or the raw <a href="/api">JSON API</a></p>
 <div class="note"><strong>Prototype.</strong> Every accuracy, cost and throughput

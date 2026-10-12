@@ -1,7 +1,7 @@
 # Capability Playbook
 
-A working prototype for one Trunk team — `data-and-docs` — and the three
-capabilities that make up its intake → extract → categorise pipeline.
+A working prototype for one Trunk team — `data-and-docs` — built around its
+most-depended-on capability, document extraction.
 
 It exists to answer one question, which is the question a platform team lives or
 dies by: **how much of this can you do without us?**
@@ -25,9 +25,10 @@ manifest must declare where it sits on a four-rung self-service ladder:
 | **L2** | you build on it without us |
 | **L3** | you extend it yourself |
 
-Because the rung is a required field rather than a claim in a slide, *"2 of 3
-capabilities are at L2 or above"* is a number you can read off the files — and
-moving one up a rung is a commit someone can review.
+Because the rung is a required field rather than a claim in a slide, *"the
+share of capabilities at L2 or above"* is a number you read off the files — and
+moving one up a rung is a commit someone can review, not a status someone
+reports.
 
 Both the page a person reads and the index an agent queries are generated from
 those same manifests.
@@ -83,7 +84,7 @@ python3 tools/render.py        # writes docs/, then open docs/index.md
 ```bash
 python3 tools/catalogue.py search "extract fields from an uploaded payslip"
 python3 tools/catalogue.py describe document-extraction
-python3 tools/catalogue.py consumers-of document-intake
+python3 tools/catalogue.py consumers-of document-extraction
 python3 tools/catalogue.py can-i "extract fields from an uploaded payslip" \
         --orchard business --market DE
 ```
@@ -96,9 +97,10 @@ Three queries worth running, because they behave differently:
 
 | Query | What comes back |
 |---|---|
-| `"extract fields from an uploaded payslip"` | a confident match |
-| `"file a VAT advance return"` | a **wrong** match, labelled as a guess — see below |
-| `"reconcile a bank statement"` | nothing, said plainly |
+| `"extract fields from an uploaded payslip"`, `--market DE` | `available`, with the match labelled as a guess |
+| the same need, `--market UK` | `in-progress` — and a note that contribution is open, so you could land the UK work yourself |
+| `"file a VAT advance return"` | `no-confident-match`. It found overlapping words and says it can't tell |
+| `"reconcile a bank statement"` | `no-capability-found`. Nothing, said plainly |
 
 **5. Add a capability**
 
@@ -221,12 +223,12 @@ documenting, and nobody hand-edits generated output.
 `catalogue.py` ranks by **lexical overlap**, not meaning. It can't tell a
 capability that does the thing from one that merely uses the same words — which
 produced a real bug in testing: asked to *file a VAT advance return*, it matched
-"vat" and "return" in expense categorisation and answered *available*. Nothing
-here files anything.
+"vat" and "return" in an unrelated capability and answered *available*. Nothing
+here files anything. (That capability has since been cut from the catalogue, so
+the query now returns `no-confident-match` — the commit history has the bug.)
 
-Run that query and you'll still see it pick the wrong capability. That's left in
-deliberately, because a score threshold didn't fix it — the score wasn't the
-problem. The fix was to stop merging two different claims into one answer:
+A score threshold didn't fix it, because the score wasn't the problem. The fix
+was to stop merging two different claims into one answer:
 
 - **which capability you meant** is a *guess* from word overlap
 - **whether it's live in your market** is a *fact* the manifest declares
